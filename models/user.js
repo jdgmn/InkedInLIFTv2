@@ -6,13 +6,15 @@ const UserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   firstName: String,
   lastName: String,
-});
+  role: { type: String, enum: ['member', 'admin', 'receptionist', 'intern'], default: 'member' },
+  isVerified: { type: Boolean, default: false },
+}, { timestamps: true });
 
-UserSchema.methods.setPassword = async function (password) {
+UserSchema.methods.setPassword = async function(password) {
   this.passwordHash = await bcrypt.hash(password, 10);
 };
 
-UserSchema.methods.verifyPassword = async function (password) {
+UserSchema.methods.verifyPassword = async function(password) {
   return bcrypt.compare(password, this.passwordHash);
 };
 

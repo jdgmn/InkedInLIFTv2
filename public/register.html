@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Register | InkedInLIFT</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white shadow-lg rounded-lg p-6 w-96">
+    <h1 class="text-2xl font-bold text-center mb-4">Register</h1>
+    <form id="registerForm" class="space-y-4">
+      <input type="text" id="firstName" placeholder="First Name" class="w-full border p-2 rounded" required />
+      <input type="text" id="lastName" placeholder="Last Name" class="w-full border p-2 rounded" required />
+      <input type="email" id="email" placeholder="Email" class="w-full border p-2 rounded" required />
+      <input type="password" id="password" placeholder="Password" class="w-full border p-2 rounded" required />
+      <button class="bg-green-500 hover:bg-green-600 text-white w-full py-2 rounded">Register</button>
+    </form>
+    <p class="text-center text-sm mt-4">
+      Already have an account? <a href="index.html" class="text-blue-500">Login</a>
+    </p>
+    <p id="registerError" class="text-red-500 text-sm text-center mt-2"></p>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
