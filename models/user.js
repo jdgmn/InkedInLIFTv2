@@ -6,7 +6,7 @@ const UserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   firstName: String,
   lastName: String,
-  role: { type: String, enum: ['member', 'admin', 'receptionist', 'intern'], default: 'member' },
+  role: { type: String, enum: ['client', 'admin', 'receptionist'], default: 'client' },
   isVerified: { type: Boolean, default: false },
 }, { timestamps: true });
 
