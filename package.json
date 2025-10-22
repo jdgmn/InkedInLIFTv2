@@ -21,11 +21,16 @@
   "homepage": "https://github.com/jdgmn/InkedInLIFTv2#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "bootstrap": "^5.3.8",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
+    "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.9"
   },

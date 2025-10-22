@@ -29,3 +29,20 @@ exports.getMemberships = async (req, res) => {
   const memberships = await Membership.find().populate("user", "email firstName lastName");
   res.json(memberships);
 };
+
+exports.deleteMembership = async (req, res) => {
+  try {
+    const membership = await Membership.findById(req.params.id);
+    if (!membership) return res.status(404).json({ error: "Not found" });
+
+    const currentYear = new Date().getFullYear();
+    if (new Date(membership.endDate).getFullYear() === currentYear) {
+      return res.status(403).json({ error: "Cannot delete current year data" });
+    }
+
+    await membership.deleteOne();
+    res.json({ message: "Membership deleted (archived year)" });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+};

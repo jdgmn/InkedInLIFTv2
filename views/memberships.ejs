@@ -1,0 +1,25 @@
+<%- include('layout', { body: `
+  <h2>Memberships</h2>
+  <table class="table table-striped mt-3">
+    <thead>
+      <tr>
+        <th>Member</th>
+        <th>Plan</th>
+        <th>Price</th>
+        <th>End Date</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${memberships.map(m => `
+        <tr>
+          <td>${m.userId.firstName} ${m.userId.lastName}</td>
+          <td>${m.plan}</td>
+          <td>${m.price}</td>
+          <td>${new Date(m.endDate).toLocaleDateString()}</td>
+          <td>${m.status}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+`}) %>

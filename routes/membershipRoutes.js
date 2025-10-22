@@ -6,4 +6,6 @@ const { createMembership, getMemberships } = require("../controllers/membershipC
 router.post("/", protect, restrictTo("admin", "receptionist"), createMembership);
 router.get("/", protect, restrictTo("admin", "receptionist"), getMemberships);
 
+router.delete("/:id", protect, restrictTo("admin"), deleteMembership);
+
 module.exports = router;

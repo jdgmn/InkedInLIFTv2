@@ -9,15 +9,30 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.set("view engine", "ejs");
+app.set("views", __dirname + "/views");
 
 // Connect to MongoDB
 connectDB();
 
 require("./cron/notificationScheduler");
+require("./jobs/archiver");
 
 // Test Route
+
+const viewRoutes = require("./routes/viewRoutes");
+app.use("/", viewRoutes);
+
 app.get("/", (req, res) => {
-  res.send("🚀 InkedInLIFTv2 Server Running and Connected to MongoDB!");
+  res.render("login");
+});
+
+app.get("/register", (req, res) => {
+  res.render("register");
+});
+
+app.get("/dashboard", (req, res) => {
+  res.render("dashboard");
 });
 
 const userRoutes = require("./routes/userRoutes");
@@ -27,10 +42,9 @@ const checkinRoutes = require("./routes/checkinRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 app.use("/api/analytics", analyticsRoutes);
 
-
 app.use("/api/memberships", membershipRoutes);
 app.use("/api/checkins", checkinRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,0 +1,19 @@
+<%- include('layout', { body: `
+  <h2>Check-ins</h2>
+  <table class="table table-striped mt-3">
+    <thead>
+      <tr>
+        <th>Member</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${checkins.map(c => `
+        <tr>
+          <td>${c.userId.firstName} ${c.userId.lastName}</td>
+          <td>${new Date(c.date).toLocaleString()}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+`}) %>
