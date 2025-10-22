@@ -1,11 +1,12 @@
 {
   "name": "inkedinliftv2",
   "version": "1.0.0",
-  "description": "Logging Integrated Fitness Tracking by InkedIn",
+  "description": "",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "repository": {
     "type": "git",
@@ -20,9 +21,15 @@
   "homepage": "https://github.com/jdgmn/InkedInLIFTv2#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.19.1"
+    "mongoose": "^8.19.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.9"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }

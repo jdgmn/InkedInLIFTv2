@@ -1,23 +1,31 @@
-const Membership = require('../models/membership');
+const Membership = require("../models/Membership");
+const User = require("../models/User");
 
-exports.create = async (req, res) => {
+// Create or renew membership
+exports.createMembership = async (req, res) => {
   try {
-    const data = req.body;
-    const membership = new Membership(data);
+    const { email, membershipType, price, paymentStatus } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const membership = new Membership({
+      user: user._id,
+      membershipType,
+      price,
+      paymentStatus,
+    });
+
     await membership.save();
-    res.json(membership);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.json({ message: "Membership created successfully", membership });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
-exports.findAll = async (req, res) => {
-  try {
-    const memberships = await Membership.find().sort({ createdAt: -1 });
-    res.json(memberships);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
+// Get all memberships
+exports.getMemberships = async (req, res) => {
+  const memberships = await Membership.find().populate("user", "email firstName lastName");
+  res.json(memberships);
 };
