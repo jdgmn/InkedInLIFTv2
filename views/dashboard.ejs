@@ -1,92 +1,130 @@
-<%- include('layout', { body: `
-<h1 class="mt-3">Dashboard</h1>
-<div class="row">
-  <div class="col-md-4">
-    <div class="card mb-3"><div class="card-body">
-      <h5>Total Users</h5><p id="totalUsers">–</p>
-    </div></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard | InkedInLIFTv2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">InkedInLIFT</a>
+      <div class="navbar-nav">
+        <a class="nav-link" href="/dashboard">Dashboard</a>
+        <a class="nav-link" href="/users">Users</a>
+        <a class="nav-link" href="/memberships">Memberships</a>
+        <a class="nav-link" href="/checkins">Check-ins</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <h1 class="mt-3">Dashboard</h1>
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card mb-3"><div class="card-body">
+          <h5>Total Users</h5><p id="totalUsers">–</p>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-3"><div class="card-body">
+          <h5>Active Members</h5><p id="totalMembers">–</p>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-3"><div class="card-body">
+          <h5>Total Check-ins</h5><p id="totalCheckins">–</p>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h4>Expiring memberships (7 days)</h4>
+        <ul id="expiringList" class="list-group"></ul>
+      </div>
+      <div class="col-md-6">
+        <h4>Quick Check-in</h4>
+        <form id="checkinForm" class="mb-3">
+          <div class="mb-2"><input id="checkinEmail" class="form-control" placeholder="Email (optional)" /></div>
+          <div class="mb-2"><input id="checkinName" class="form-control" placeholder="Name (optional)" /></div>
+          <button class="btn btn-success">Check in</button>
+        </form>
+        <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+      </div>
+    </div>
   </div>
-  <div class="col-md-4">
-    <div class="card mb-3"><div class="card-body">
-      <h5>Active Members</h5><p id="totalMembers">–</p>
-    </div></div>
-  </div>
-  <div class="col-md-4">
-    <div class="card mb-3"><div class="card-body">
-      <h5>Total Check-ins</h5><p id="totalCheckins">–</p>
-    </div></div>
-  </div>
-</div>
 
-<div class="row">
-  <div class="col-md-6">
-    <h4>Expiring memberships (7 days)</h4>
-    <ul id="expiringList" class="list-group"></ul>
-  </div>
-  <div class="col-md-6">
-    <h4>Quick Check-in</h4>
-    <form id="checkinForm" class="mb-3">
-      <div class="mb-2"><input id="checkinEmail" class="form-control" placeholder="Email (optional)" /></div>
-      <div class="mb-2"><input id="checkinName" class="form-control" placeholder="Name (optional)" /></div>
-      <button class="btn btn-success">Check in</button>
-    </form>
-    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
-  </div>
-</div>
+  <script>
+  (async () => {
+    function getToken() {
+      const t = localStorage.getItem("token");
+      if (t) return t;
+      const match = document.cookie.match(/(?:^|; )token=([^;]+)/);
+      return match ? match[1] : null;
+    }
 
-<script>
-(async () => {
-  const token = localStorage.getItem("token");
-  if (!token) return window.location.href = "/";
+    const token = getToken();
+    if (!token) {
+      localStorage.removeItem("token");
+      alert("Not logged in. Redirecting to login.");
+      return window.location.href = "/";
+    }
 
-  const headers = { Authorization: "Bearer " + token };
+    const headers = { Authorization: "Bearer " + token };
 
-  const [statsRes, expiringRes] = await Promise.all([
-    fetch("/api/analytics/dashboard", { headers }),
-    fetch("/api/analytics/expiring", { headers }),
-  ]);
+    const statsRes = await fetch("/api/analytics/dashboard", { headers });
+    if (statsRes.status === 401 || statsRes.status === 403) {
+      localStorage.removeItem("token");
+      document.cookie = "token=; path=/; max-age=0";
+      alert("Session expired or unauthorized. Please log in again.");
+      return window.location.href = "/";
+    }
+    if (!statsRes.ok) {
+      console.error("Failed to load dashboard stats:", statsRes.status);
+    } else {
+      const stats = await statsRes.json();
+      document.getElementById("totalUsers").innerText = stats.totalUsers ?? 0;
+      document.getElementById("totalMembers").innerText = stats.totalMembers ?? 0;
+      document.getElementById("totalCheckins").innerText = stats.totalCheckins ?? 0;
+    }
 
-  if (!statsRes.ok) {
-    localStorage.removeItem("token");
-    alert("Session expired");
-    return window.location.href = "/";
-  }
+    const expiringRes = await fetch("/api/analytics/expiring", { headers });
+    let expiring = [];
+    if (expiringRes.ok) expiring = await expiringRes.json();
 
-  const stats = await statsRes.json();
-  const expiring = await expiringRes.json();
+    const ul = document.getElementById("expiringList");
+    if (!expiring || expiring.length === 0) {
+      ul.innerHTML = '<li class="list-group-item">No expiring memberships.</li>';
+    } else {
+      ul.innerHTML = expiring.map(m => {
+        const name = m.user ? ((m.user.firstName||'') + ' ' + (m.user.lastName||'')).trim() : (m.email||'Unknown');
+        const end = m.endDate ? new Date(m.endDate).toLocaleDateString() : '—';
+        return '<li class="list-group-item">' + name + ' — ' + (m.membershipType||'') + ' — ends ' + end + '</li>';
+      }).join('');
+    }
 
-  document.getElementById("totalUsers").innerText = stats.totalUsers ?? 0;
-  document.getElementById("totalMembers").innerText = stats.totalMembers ?? 0;
-  document.getElementById("totalCheckins").innerText = stats.totalCheckins ?? 0;
-
-  const ul = document.getElementById("expiringList");
-  if (!expiring || expiring.length === 0) {
-    ul.innerHTML = '<li class="list-group-item">No expiring memberships.</li>';
-  } else {
-    ul.innerHTML = expiring.map(m => {
-      const name = m.user ? ((m.user.firstName||'') + ' ' + (m.user.lastName||'')).trim() : (m.email||'Unknown');
-      const end = m.endDate ? new Date(m.endDate).toLocaleDateString() : '—';
-      return `<li class="list-group-item">${name} — ${m.membershipType} — ends ${end}</li>`;
-    }).join('');
-  }
-
-  document.getElementById("checkinForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("checkinEmail").value;
-    const name = document.getElementById("checkinName").value;
-    const res = await fetch("/api/checkins", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ email, name }),
+    document.getElementById("checkinForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("checkinEmail").value;
+      const name = document.getElementById("checkinName").value;
+      const res = await fetch("/api/checkins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ email, name }),
+      });
+      const data = await res.json();
+      alert(data.message || 'Check-in recorded');
     });
-    const data = await res.json();
-    alert(data.message || 'Check-in recorded');
-  });
 
-  document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.removeItem("token");
-    window.location.href = "/";
-  });
-})();
-</script>
-`}) %>
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      document.cookie = "token=; path=/; max-age=0";
+      window.location.href = "/";
+    });
+  })();
+  </script>
+</body>
+</html>

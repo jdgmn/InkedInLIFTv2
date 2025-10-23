@@ -44,12 +44,29 @@
         });
 
         const data = await res.json();
+        console.log("Login response:", res.status, data); // DEBUG
+
         if (!res.ok) {
-          alert(data.error || "Login failed");
+          // show server message (validation or auth)
+          const err = data.error || (data.errors && data.errors.map(e => e.msg).join(", ")) || "Login failed";
+          alert(err);
           return;
         }
 
-        localStorage.setItem("token", data.token);
+        if (!data.token) {
+          alert("Login succeeded but no token returned. Check server logs.");
+          return;
+        }
+
+        // persist token reliably
+        try {
+          localStorage.setItem("token", data.token);
+          // also set cookie as a fallback for some clients (expires in 7 days)
+          document.cookie = `token=${data.token}; path=/; max-age=${7*24*60*60}`;
+        } catch (e) {
+          console.warn("Storing token failed:", e);
+        }
+
         window.location.href = "/dashboard";
       });
     </script>

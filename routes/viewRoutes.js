@@ -9,9 +9,8 @@ const { protect, restrictTo } = require("../middlewares/authMiddleware");
 router.get("/", (req, res) => res.render("login"));
 router.get("/register", (req, res) => res.render("register"));
 
-// Dashboard view (protected - admin)
-router.get("/dashboard", protect, restrictTo("admin"), async (req, res) => {
-  // server-side rendering of dashboard can fetch stats or pass empty - client fetches via API
+// Dashboard view (no server-side protect)
+router.get("/dashboard", async (req, res) => {
   res.render("dashboard");
 });
 
