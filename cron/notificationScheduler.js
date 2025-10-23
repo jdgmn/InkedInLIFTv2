@@ -32,7 +32,6 @@ cron.schedule("0 0 * * *", async () => {
       }
     }
 
-    // optionally, additional notifications (7 days) can be added similarly
   } catch (error) {
     console.error("Notification scheduler error:", error);
   }

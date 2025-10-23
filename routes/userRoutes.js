@@ -7,14 +7,13 @@ const {
   forgotPassword,
   resetPassword,
 } = require("../controllers/userController");
-const validateRequest = require("../validators/validateRequest");
-const { register, login, forgot, reset } = require("../validators/userValidators");
+const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
 // Public routes
-router.post("/register", register, validateRequest, registerUser);
+router.post("/register", registerUser);
 router.get("/verify/:token", verifyEmail);
-router.post("/login", login, validateRequest, loginUser);
-router.post("/forgot", forgot, validateRequest, forgotPassword);
-router.post("/reset/:token", reset, validateRequest, resetPassword);
+router.post("/login", loginUser);
+router.post("/forgot", forgotPassword);
+router.post("/reset/:token", resetPassword);
 
 module.exports = router;

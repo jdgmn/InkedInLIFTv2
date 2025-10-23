@@ -6,18 +6,9 @@ const {
   getMemberships,
   deleteMembership,
 } = require("../controllers/membershipController");
-const validateRequest = require("../validators/validateRequest");
-const { createMembership: createMembershipValidator } = require("../validators/membershipValidators");
 
 // Protected endpoints
-router.post(
-  "/",
-  protect,
-  restrictTo("admin", "receptionist"),
-  createMembershipValidator,
-  validateRequest,
-  createMembership
-);
+router.post("/", protect, restrictTo("admin", "receptionist"), createMembership);
 router.get("/", protect, restrictTo("admin", "receptionist"), getMemberships);
 router.delete("/:id", protect, restrictTo("admin"), deleteMembership);
 
