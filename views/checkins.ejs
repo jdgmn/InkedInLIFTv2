@@ -10,8 +10,8 @@
     <tbody>
       ${checkins.map(c => `
         <tr>
-          <td>${c.userId.firstName} ${c.userId.lastName}</td>
-          <td>${new Date(c.date).toLocaleString()}</td>
+          <td>${c.user?.firstName || c.name || ''} ${c.user?.lastName || ''}</td>
+          <td>${c.checkinTime ? new Date(c.checkinTime).toLocaleString() : ''}</td>
         </tr>
       `).join('')}
     </tbody>

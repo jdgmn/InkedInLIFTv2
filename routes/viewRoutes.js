@@ -5,33 +5,53 @@ const Membership = require("../models/Membership");
 const Checkin = require("../models/Checkin");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
-// Dashboard
-router.get("/dashboard", protect, restrictTo("admin", "receptionist"), async (req, res) => {
-  const stats = {
-    totalUsers: await User.countDocuments(),
-    totalMembers: await Membership.countDocuments(),
-    totalCheckins: await Checkin.countDocuments(),
-    activeMemberships: await Membership.countDocuments({ status: "active" }),
-  };
-  res.render("dashboard", { stats });
+// Public pages
+router.get("/", (req, res) => res.render("login"));
+router.get("/register", (req, res) => res.render("register"));
+
+// Dashboard view (protected - admin)
+router.get("/dashboard", protect, restrictTo("admin"), async (req, res) => {
+  // server-side rendering of dashboard can fetch stats or pass empty - client fetches via API
+  res.render("dashboard");
 });
 
 // Users page
-router.get("/users", protect, restrictTo("admin", "receptionist"), async (req, res) => {
-  const users = await User.find();
-  res.render("users", { users });
-});
+router.get(
+  "/users",
+  protect,
+  restrictTo("admin", "receptionist"),
+  async (req, res) => {
+    const users = await User.find().select("firstName lastName email role");
+    res.render("users", { users });
+  }
+);
 
 // Memberships
-router.get("/memberships", protect, restrictTo("admin", "receptionist"), async (req, res) => {
-  const memberships = await Membership.find().populate("userId");
-  res.render("memberships", { memberships });
-});
+router.get(
+  "/memberships",
+  protect,
+  restrictTo("admin", "receptionist"),
+  async (req, res) => {
+    const memberships = await Membership.find().populate(
+      "user",
+      "firstName lastName email"
+    );
+    res.render("memberships", { memberships });
+  }
+);
 
 // Check-ins
-router.get("/checkins", protect, restrictTo("admin", "receptionist"), async (req, res) => {
-  const checkins = await Checkin.find().populate("userId");
-  res.render("checkins", { checkins });
-});
+router.get(
+  "/checkins",
+  protect,
+  restrictTo("admin", "receptionist"),
+  async (req, res) => {
+    const checkins = await Checkin.find().populate(
+      "user",
+      "firstName lastName email"
+    );
+    res.render("checkins", { checkins });
+  }
+);
 
 module.exports = router;

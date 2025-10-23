@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
+const path = require("path");
 
 const app = express();
 
@@ -10,41 +11,35 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.set("view engine", "ejs");
-app.set("views", __dirname + "/views");
+app.set("views", path.join(__dirname, "views"));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Connect to MongoDB
 connectDB();
 
+// Cron jobs / background tasks
 require("./cron/notificationScheduler");
 require("./jobs/archiver");
 
-// Test Route
-
+// Routes
 const viewRoutes = require("./routes/viewRoutes");
-app.use("/", viewRoutes);
-
-app.get("/", (req, res) => {
-  res.render("login");
-});
-
-app.get("/register", (req, res) => {
-  res.render("register");
-});
-
-app.get("/dashboard", (req, res) => {
-  res.render("dashboard");
-});
-
 const userRoutes = require("./routes/userRoutes");
-app.use("/api/users", userRoutes);
-const membershipRoutes = require("./routes/membershipRoutes");
 const checkinRoutes = require("./routes/checkinRoutes");
+const membershipRoutes = require("./routes/membershipRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+
+app.use("/", viewRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/checkins", checkinRoutes);
+app.use("/api/memberships", membershipRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
-app.use("/api/memberships", membershipRoutes);
-app.use("/api/checkins", checkinRoutes);
+// Basic root render
+app.get("/", (req, res) => res.render("login"));
 
-// Start Server
+// Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

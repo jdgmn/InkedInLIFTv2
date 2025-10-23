@@ -7,20 +7,14 @@ const {
   forgotPassword,
   resetPassword,
 } = require("../controllers/userController");
-
-const { protect, restrictTo } = require("../middlewares/authMiddleware");
+const validateRequest = require("../validators/validateRequest");
+const { register, login, forgot, reset } = require("../validators/userValidators");
 
 // Public routes
-router.post("/register", registerUser);
+router.post("/register", register, validateRequest, registerUser);
 router.get("/verify/:token", verifyEmail);
-router.post("/login", loginUser);
-router.post("/forgot", forgotPassword);
-router.post("/reset/:token", resetPassword);
-
-// Example of a protected admin-only route
-router.get("/all", protect, restrictTo("admin"), async (req, res) => {
-  const users = await require("../models/User").find().select("-passwordHash");
-  res.json(users);
-});
+router.post("/login", login, validateRequest, loginUser);
+router.post("/forgot", forgot, validateRequest, forgotPassword);
+router.post("/reset/:token", reset, validateRequest, resetPassword);
 
 module.exports = router;

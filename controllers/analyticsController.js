@@ -6,46 +6,40 @@ const User = require("../models/User");
 exports.getDashboardStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
-    const totalMembers = await Membership.countDocuments();
+    const totalMembers = await Membership.countDocuments({ status: "active" });
     const totalCheckins = await Checkin.countDocuments();
-
-    const activeMemberships = await Membership.countDocuments({
-      endDate: { $gte: new Date() },
-    });
-
-    res.json({
-      totalUsers,
-      totalMembers,
-      totalCheckins,
-      activeMemberships,
-    });
+    res.json({ totalUsers, totalMembers, totalCheckins });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error fetching dashboard stats" });
+    console.error("Analytics error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 // GET check-ins by day (past 7 days)
 exports.getWeeklyCheckins = async (req, res) => {
   try {
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
+    const today = new Date();
+    const past = new Date(today);
+    past.setDate(today.getDate() - 6); // 7 days inclusive
 
-    const data = await Checkin.aggregate([
-      { $match: { createdAt: { $gte: last7Days } } },
+    const pipeline = [
+      { $match: { checkinTime: { $gte: past, $lte: today } } },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          total: { $sum: 1 },
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$checkinTime" },
+          },
+          count: { $sum: 1 },
         },
       },
       { $sort: { _id: 1 } },
-    ]);
+    ];
 
-    res.json(data);
+    const rows = await Checkin.aggregate(pipeline);
+    res.json(rows);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error fetching check-in stats" });
+    console.error("Weekly checkins error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -58,11 +52,11 @@ exports.getExpiringMemberships = async (req, res) => {
 
     const expiring = await Membership.find({
       endDate: { $gte: today, $lte: nextWeek },
-    }).populate("userId", "firstName lastName email");
+    }).populate("user", "firstName lastName email");
 
     res.json(expiring);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error fetching expiring memberships" });
+    console.error("Expiring memberships error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };

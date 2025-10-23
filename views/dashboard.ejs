@@ -1,43 +1,92 @@
-<% layout('layout') %>
-<!-- Extends layout.ejs -->
-<h1>Dashboard</h1>
+<%- include('layout', { body: `
+<h1 class="mt-3">Dashboard</h1>
 <div class="row">
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body">
-        <h5>Total Users</h5>
-        <p><%= stats.totalUsers %></p>
-      </div>
-    </div>
+  <div class="col-md-4">
+    <div class="card mb-3"><div class="card-body">
+      <h5>Total Users</h5><p id="totalUsers">–</p>
+    </div></div>
   </div>
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body">
-        <h5>Total Members</h5>
-        <p><%= stats.totalMembers %></p>
-      </div>
-    </div>
+  <div class="col-md-4">
+    <div class="card mb-3"><div class="card-body">
+      <h5>Active Members</h5><p id="totalMembers">–</p>
+    </div></div>
   </div>
-  <!-- Add more cards for totalCheckins, activeMemberships -->
+  <div class="col-md-4">
+    <div class="card mb-3"><div class="card-body">
+      <h5>Total Check-ins</h5><p id="totalCheckins">–</p>
+    </div></div>
+  </div>
 </div>
-<!-- Add a form for quick actions, e.g., check-in -->
-<form id="checkinForm" class="mt-4">
-  <input type="email" id="email" placeholder="User Email" required />
-  <button type="submit" class="btn btn-primary">Check In</button>
-</form>
+
+<div class="row">
+  <div class="col-md-6">
+    <h4>Expiring memberships (7 days)</h4>
+    <ul id="expiringList" class="list-group"></ul>
+  </div>
+  <div class="col-md-6">
+    <h4>Quick Check-in</h4>
+    <form id="checkinForm" class="mb-3">
+      <div class="mb-2"><input id="checkinEmail" class="form-control" placeholder="Email (optional)" /></div>
+      <div class="mb-2"><input id="checkinName" class="form-control" placeholder="Name (optional)" /></div>
+      <button class="btn btn-success">Check in</button>
+    </form>
+    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+  </div>
+</div>
+
 <script>
-  // Client-side JS for AJAX (see below)
-  document
-    .getElementById("checkinForm")
-    .addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value;
-      const response = await fetch("/api/checkins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const result = await response.json();
-      alert(result.message); // Show success/error
+(async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return window.location.href = "/";
+
+  const headers = { Authorization: "Bearer " + token };
+
+  const [statsRes, expiringRes] = await Promise.all([
+    fetch("/api/analytics/dashboard", { headers }),
+    fetch("/api/analytics/expiring", { headers }),
+  ]);
+
+  if (!statsRes.ok) {
+    localStorage.removeItem("token");
+    alert("Session expired");
+    return window.location.href = "/";
+  }
+
+  const stats = await statsRes.json();
+  const expiring = await expiringRes.json();
+
+  document.getElementById("totalUsers").innerText = stats.totalUsers ?? 0;
+  document.getElementById("totalMembers").innerText = stats.totalMembers ?? 0;
+  document.getElementById("totalCheckins").innerText = stats.totalCheckins ?? 0;
+
+  const ul = document.getElementById("expiringList");
+  if (!expiring || expiring.length === 0) {
+    ul.innerHTML = '<li class="list-group-item">No expiring memberships.</li>';
+  } else {
+    ul.innerHTML = expiring.map(m => {
+      const name = m.user ? ((m.user.firstName||'') + ' ' + (m.user.lastName||'')).trim() : (m.email||'Unknown');
+      const end = m.endDate ? new Date(m.endDate).toLocaleDateString() : '—';
+      return `<li class="list-group-item">${name} — ${m.membershipType} — ends ${end}</li>`;
+    }).join('');
+  }
+
+  document.getElementById("checkinForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("checkinEmail").value;
+    const name = document.getElementById("checkinName").value;
+    const res = await fetch("/api/checkins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ email, name }),
     });
+    const data = await res.json();
+    alert(data.message || 'Check-in recorded');
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  });
+})();
 </script>
+`}) %>

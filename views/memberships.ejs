@@ -13,10 +13,10 @@
     <tbody>
       ${memberships.map(m => `
         <tr>
-          <td>${m.userId.firstName} ${m.userId.lastName}</td>
-          <td>${m.plan}</td>
+          <td>${m.user?.firstName || ''} ${m.user?.lastName || ''}</td>
+          <td>${m.membershipType}</td>
           <td>${m.price}</td>
-          <td>${new Date(m.endDate).toLocaleDateString()}</td>
+          <td>${m.endDate ? new Date(m.endDate).toLocaleDateString() : ''}</td>
           <td>${m.status}</td>
         </tr>
       `).join('')}

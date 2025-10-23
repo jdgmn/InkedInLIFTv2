@@ -10,6 +10,6 @@ const checkinSchema = new mongoose.Schema({
   email: String,
   checkinTime: { type: Date, default: Date.now },
   isMember: { type: Boolean, default: false },
-});
+}, { timestamps: true }); // <-- added timestamps
 
 module.exports = mongoose.model("Checkin", checkinSchema);

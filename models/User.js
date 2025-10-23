@@ -1,24 +1,26 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true, lowercase: true },
-  passwordHash: { type: String, required: true },
-  firstName: String,
-  lastName: String,
+const UserSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  firstName: { type: String },
+  lastName: { type: String },
   role: { type: String, enum: ["admin", "receptionist", "client"], default: "client" },
+  passwordHash: { type: String },
   verified: { type: Boolean, default: false },
-  verificationToken: String,
-  resetToken: String,
-  createdAt: { type: Date, default: Date.now },
-});
+  verificationToken: { type: String },
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
+}, { timestamps: true });
 
-userSchema.methods.setPassword = async function (password) {
-  this.passwordHash = await bcrypt.hash(password, 10);
+UserSchema.methods.setPassword = async function (password) {
+  const salt = await bcrypt.genSalt(10);
+  this.passwordHash = await bcrypt.hash(password, salt);
 };
 
-userSchema.methods.verifyPassword = async function (password) {
-  return await bcrypt.compare(password, this.passwordHash);
+UserSchema.methods.verifyPassword = async function (password) {
+  if (!this.passwordHash) return false;
+  return bcrypt.compare(password, this.passwordHash);
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("User", UserSchema);

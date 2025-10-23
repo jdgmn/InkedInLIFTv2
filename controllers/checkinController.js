@@ -5,19 +5,29 @@ const User = require("../models/User");
 exports.checkinUser = async (req, res) => {
   try {
     const { email, name } = req.body;
-    let user = await User.findOne({ email });
-    let isMember = false;
+    if (!email && !name)
+      return res.status(400).json({ error: "email or name is required" });
 
+    let user = null;
+    if (email) user = await User.findOne({ email });
+
+    // Determine membership status
+    let isMember = false;
     if (user) {
-      const membership = await Membership.findOne({
+      const activeMembership = await Membership.findOne({
         user: user._id,
         status: "active",
+        endDate: { $gte: new Date() },
       });
-
-      if (membership) isMember = true;
+      if (activeMembership) isMember = true;
     }
 
-    const checkin = new Checkin({ user: user?._id, name, email, isMember });
+    const checkin = new Checkin({
+      user: user ? user._id : undefined,
+      name: name || (user ? `${user.firstName} ${user.lastName}` : undefined),
+      email: email || (user ? user.email : undefined),
+      isMember,
+    });
     await checkin.save();
 
     res.json({
@@ -25,7 +35,7 @@ exports.checkinUser = async (req, res) => {
       checkin,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Checkin error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };

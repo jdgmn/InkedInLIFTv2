@@ -1,9 +1,24 @@
 const express = require("express");
 const router = express.Router();
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
-const { createMembership, getMemberships } = require("../controllers/membershipController");
+const {
+  createMembership,
+  getMemberships,
+  deleteMembership,
+} = require("../controllers/membershipController");
+const validateRequest = require("../validators/validateRequest");
+const { createMembership: createMembershipValidator } = require("../validators/membershipValidators");
 
-router.post("/", protect, restrictTo("admin", "receptionist"), createMembership);
+// Protected endpoints
+router.post(
+  "/",
+  protect,
+  restrictTo("admin", "receptionist"),
+  createMembershipValidator,
+  validateRequest,
+  createMembership
+);
 router.get("/", protect, restrictTo("admin", "receptionist"), getMemberships);
+router.delete("/:id", protect, restrictTo("admin"), deleteMembership);
 
 module.exports = router;
