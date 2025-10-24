@@ -37,7 +37,7 @@
     <div class="col-md-3">
       <div class="card"><div class="card-body">
         <h6 class="text-muted">MRR (estimate)</h6>
-        <h3 id="mrr">$–</h3>
+        <h3 id="mrr">₱–</h3>
       </div></div>
     </div>
   </div>
@@ -46,7 +46,7 @@
     <div class="col-md-3">
       <div class="card"><div class="card-body">
         <h6 class="text-muted">Revenue (30d)</h6>
-        <h3 id="rev30">$–</h3>
+        <h3 id="rev30">₱–</h3>
       </div></div>
     </div>
 
@@ -130,13 +130,13 @@
     // MRR
     const mrr = await safeFetch("/api/analytics/mrr");
     if (mrr && typeof mrr.mrr !== "undefined") {
-      document.getElementById("mrr").innerText = "$" + (Math.round((mrr.mrr || 0) * 100) / 100).toLocaleString();
+      document.getElementById("mrr").innerText = "₱" + (Math.round((mrr.mrr || 0) * 100) / 100).toLocaleString();
     }
 
     // 30d revenue + new members
     const rev30 = await safeFetch("/api/analytics/revenue-30d");
     if (rev30) {
-      document.getElementById("rev30").innerText = "$" + (Math.round((rev30.revenue30d || 0) * 100) / 100).toLocaleString();
+      document.getElementById("rev30").innerText = "₱" + (Math.round((rev30.revenue30d || 0) * 100) / 100).toLocaleString();
     }
     const new30 = await safeFetch("/api/analytics/new-members-30d");
     if (new30) {

@@ -23,7 +23,7 @@
             <option value="annual">Annual</option>
           </select>
         </div>
-        <div class="col-md-2"><input id="memPrice" type="number" step="0.01" class="form-control" placeholder="Price" required /></div>
+        <div class="col-md-2"><input id="memPrice" type="number" step="0.01" class="form-control" placeholder="Price (₱)" required /></div>
         <div class="col-md-2">
           <select id="memPayment" class="form-select"><option value="paid">Paid</option><option value="pending">Pending</option><option value="failed">Failed</option></select>
         </div>
@@ -34,7 +34,7 @@
   </div>
 
   <table class="table table-striped" id="membersTable">
-    <thead><tr><th>Member</th><th>Plan</th><th>Price</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
+    <thead><tr><th>Member</th><th>Plan</th><th>Price (₱)</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody></tbody>
   </table>
 
@@ -60,7 +60,7 @@
       const res = await fetch("/api/memberships", { headers: headersAuth });
       if (!res.ok) { tbody.innerHTML = "<tr><td colspan='6'>Failed to load</td></tr>"; return; }
       const items = await res.json();
-      tbody.innerHTML = items.map(m => `<tr data-id="${m._id}"><td>${(m.user ? (m.user.firstName||'') + ' ' + (m.user.lastName||'') : (m.email||'Unknown')).trim()}</td><td>${m.membershipType}</td><td>${m.price}</td><td>${m.endDate ? new Date(m.endDate).toLocaleDateString() : ''}</td><td>${m.status}</td><td><button class="btn btn-sm btn-danger delBtn">Delete</button> <button class="btn btn-sm btn-primary editBtn">Edit</button></td></tr>`).join("");
+      tbody.innerHTML = items.map(m => `<tr data-id="${m._id}"><td>${(m.user ? (m.user.firstName||'') + ' ' + (m.user.lastName||'') : (m.email||'Unknown')).trim()}</td><td>${m.membershipType}</td><td>₱${m.price}</td><td>${m.endDate ? new Date(m.endDate).toLocaleDateString() : ''}</td><td>${m.status}</td><td><button class="btn btn-sm btn-danger delBtn">Delete</button> <button class="btn btn-sm btn-primary editBtn">Edit</button></td></tr>`).join("");
       attach();
     }
 
