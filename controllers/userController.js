@@ -184,3 +184,57 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// Admin create user (allows setting role, auto-verified)
+exports.adminCreateUser = async (req, res) => {
+  try {
+    const { email, password, firstName, lastName, role } = req.body;
+    if (!email || !password || !firstName || !lastName)
+      return res.status(400).json({ error: "email, password, firstName and lastName are required" });
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ error: "Email already exists" });
+
+    const user = new User({
+      email,
+      firstName,
+      lastName,
+      role: role || "client",
+      verified: true, // admin-created => verified
+    });
+
+    await user.setPassword(password);
+    await user.save();
+
+    res.status(201).json({ message: "User created by admin", user: { id: user._id, email: user.email, role: user.role } });
+  } catch (error) {
+    console.error("Admin create user error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// UPDATE user (admin)
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = (({ firstName, lastName, email, role, verified }) => ({ firstName, lastName, email, role, verified }))(req.body);
+    const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-passwordHash -__v");
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ message: "User updated", user });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// DELETE user (admin)
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await User.findByIdAndDelete(id);
+    res.json({ message: "User deleted" });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};

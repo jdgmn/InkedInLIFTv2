@@ -39,3 +39,16 @@ exports.checkinUser = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// DELETE checkin (admin)
+exports.deleteCheckin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Checkin.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: "Checkin not found" });
+    res.json({ message: "Checkin deleted" });
+  } catch (error) {
+    console.error("Delete checkin error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};

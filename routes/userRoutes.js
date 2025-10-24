@@ -7,6 +7,7 @@ const {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  adminCreateUser,
 } = require("../controllers/userController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -21,7 +22,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Public routes
+// Admin create (protected) - POST /api/users
+router.post("/", protect, restrictTo("admin"), adminCreateUser);
+
+// Public registration remains at /api/users/register
 router.post("/register", registerUser);
 router.get("/verify/:token", verifyEmail);
 router.post("/login", loginUser);

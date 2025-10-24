@@ -49,3 +49,6 @@ Key endpoints (server JSON)
 - POST /api/memberships (protected)
 - GET /api/analytics/dashboard (protected, admin)
 - GET /api/analytics/expiring (protected)
+
+TO-DO!!
+- THE SELF CHECK-IN PART

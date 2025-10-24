@@ -51,7 +51,9 @@
       role: document.getElementById("regRole").value
     };
     const hdrs = { "Content-Type": "application/json", ...headersAuth };
-    const res = await fetch("/api/users/register", { method: "POST", headers: hdrs, body: JSON.stringify(payload) });
+    // choose admin-create endpoint if admin token is present, otherwise public register
+    const endpoint = token ? "/api/users" : "/api/users/register";
+    const res = await fetch(endpoint, { method: "POST", headers: hdrs, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) { registerMsg.innerText = data.error || (data.message || "Registration failed"); registerMsg.className = "text-danger"; return; }
     registerMsg.innerText = data.message || "User registered"; registerMsg.className = "text-success";

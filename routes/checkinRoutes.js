@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Checkin = require("../models/Checkin");
-const { checkinUser } = require("../controllers/checkinController");
+const { checkinUser, deleteCheckin } = require("../controllers/checkinController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
 // Public endpoint - create checkin
@@ -17,5 +17,8 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Protected delete
+router.delete("/:id", protect, restrictTo("admin"), deleteCheckin);
 
 module.exports = router;
