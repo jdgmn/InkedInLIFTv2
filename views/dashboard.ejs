@@ -8,123 +8,205 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <a class="navbar-brand" href="/">InkedInLIFT</a>
-      <div class="navbar-nav">
-        <a class="nav-link" href="/dashboard">Dashboard</a>
-        <a class="nav-link" href="/users">Users</a>
-        <a class="nav-link" href="/memberships">Memberships</a>
-        <a class="nav-link" href="/checkins">Check-ins</a>
-      </div>
-    </div>
-  </nav>
+  <%- include('partials/header', { title: 'Dashboard' }) %>
 
-  <div class="container mt-4">
-    <h1 class="mt-3">Dashboard</h1>
-    <div class="row">
-      <div class="col-md-4">
-        <div class="card mb-3"><div class="card-body">
-          <h5>Total Users</h5><p id="totalUsers">–</p>
-        </div></div>
-      </div>
-      <div class="col-md-4">
-        <div class="card mb-3"><div class="card-body">
-          <h5>Active Members</h5><p id="totalMembers">–</p>
-        </div></div>
-      </div>
-      <div class="col-md-4">
-        <div class="card mb-3"><div class="card-body">
-          <h5>Total Check-ins</h5><p id="totalCheckins">–</p>
-        </div></div>
-      </div>
+  <h1 class="mt-3">Dashboard</h1>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">Total Users</h6>
+        <h3 id="totalUsers">–</h3>
+      </div></div>
     </div>
 
-    <div class="row">
-      <div class="col-md-6">
-        <h4>Expiring memberships (7 days)</h4>
-        <ul id="expiringList" class="list-group"></ul>
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">Active Members</h6>
+        <h3 id="totalMembers">–</h3>
+      </div></div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">Total Check-ins</h6>
+        <h3 id="totalCheckins">–</h3>
+      </div></div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">MRR (estimate)</h6>
+        <h3 id="mrr">$–</h3>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">Revenue (30d)</h6>
+        <h3 id="rev30">$–</h3>
+      </div></div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">New Members (30d)</h6>
+        <h3 id="newMembers30">–</h3>
+      </div></div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">Churn (30d)</h6>
+        <h3 id="churnRate">–</h3>
+      </div></div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card"><div class="card-body">
+        <h6 class="text-muted">Expiring (7d)</h6>
+        <ul id="expiringList" class="list-unstyled mb-0 small"><li>—</li></ul>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-7">
+      <div class="card p-3">
+        <h5 class="mb-3">Revenue by plan</h5>
+        <canvas id="revenuePlanChart" width="400" height="220"></canvas>
       </div>
-      <div class="col-md-6">
-        <h4>Quick Check-in</h4>
-        <form id="checkinForm" class="mb-3">
+    </div>
+
+    <div class="col-md-5">
+      <div class="card p-3 mb-3">
+        <h5 class="mb-2">Weekly check-ins</h5>
+        <canvas id="weeklyCheckinsChart" width="400" height="160"></canvas>
+      </div>
+
+      <div class="card p-3">
+        <h5 class="mb-2">Quick Check-in</h5>
+        <form id="checkinForm" class="mb-2">
           <div class="mb-2"><input id="checkinEmail" class="form-control" placeholder="Email (optional)" /></div>
           <div class="mb-2"><input id="checkinName" class="form-control" placeholder="Name (optional)" /></div>
           <button class="btn btn-success">Check in</button>
         </form>
-        <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+        <div id="dashboardMessage" class="text-muted small"></div>
       </div>
     </div>
   </div>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
   <script>
   (async () => {
     function getToken() {
-      const t = localStorage.getItem("token");
-      if (t) return t;
-      const match = document.cookie.match(/(?:^|; )token=([^;]+)/);
-      return match ? match[1] : null;
+      try { const t = localStorage.getItem("token"); if (t) return t; } catch(e) {}
+      const m = document.cookie.match(/(?:^|; )token=([^;]+)/);
+      return m ? m[1] : null;
     }
-
     const token = getToken();
-    if (!token) {
-      localStorage.removeItem("token");
-      alert("Not logged in. Redirecting to login.");
-      return window.location.href = "/";
+    const headers = token ? { Authorization: "Bearer " + token } : {};
+
+    async function safeFetch(path) {
+      try {
+        const r = await fetch(path, { headers });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch (e) { return null; }
     }
 
-    const headers = { Authorization: "Bearer " + token };
-
-    const statsRes = await fetch("/api/analytics/dashboard", { headers });
-    if (statsRes.status === 401 || statsRes.status === 403) {
-      localStorage.removeItem("token");
-      document.cookie = "token=; path=/; max-age=0";
-      alert("Session expired or unauthorized. Please log in again.");
-      return window.location.href = "/";
-    }
-    if (!statsRes.ok) {
-      console.error("Failed to load dashboard stats:", statsRes.status);
-    } else {
-      const stats = await statsRes.json();
+    // Dashboard core stats
+    const stats = await safeFetch("/api/analytics/dashboard");
+    if (stats) {
       document.getElementById("totalUsers").innerText = stats.totalUsers ?? 0;
       document.getElementById("totalMembers").innerText = stats.totalMembers ?? 0;
       document.getElementById("totalCheckins").innerText = stats.totalCheckins ?? 0;
     }
 
-    const expiringRes = await fetch("/api/analytics/expiring", { headers });
-    let expiring = [];
-    if (expiringRes.ok) expiring = await expiringRes.json();
-
-    const ul = document.getElementById("expiringList");
-    if (!expiring || expiring.length === 0) {
-      ul.innerHTML = '<li class="list-group-item">No expiring memberships.</li>';
-    } else {
-      ul.innerHTML = expiring.map(m => {
-        const name = m.user ? ((m.user.firstName||'') + ' ' + (m.user.lastName||'')).trim() : (m.email||'Unknown');
-        const end = m.endDate ? new Date(m.endDate).toLocaleDateString() : '—';
-        return '<li class="list-group-item">' + name + ' — ' + (m.membershipType||'') + ' — ends ' + end + '</li>';
-      }).join('');
+    // MRR
+    const mrr = await safeFetch("/api/analytics/mrr");
+    if (mrr && typeof mrr.mrr !== "undefined") {
+      document.getElementById("mrr").innerText = "$" + (Math.round((mrr.mrr || 0) * 100) / 100).toLocaleString();
     }
 
+    // 30d revenue + new members
+    const rev30 = await safeFetch("/api/analytics/revenue-30d");
+    if (rev30) {
+      document.getElementById("rev30").innerText = "$" + (Math.round((rev30.revenue30d || 0) * 100) / 100).toLocaleString();
+    }
+    const new30 = await safeFetch("/api/analytics/new-members-30d");
+    if (new30) {
+      document.getElementById("newMembers30").innerText = new30.newMembers30d ?? 0;
+    }
+
+    // churn
+    const churn = await safeFetch("/api/analytics/churn");
+    if (churn) {
+      const rate = typeof churn.churnRate === "number" ? (Math.round(churn.churnRate * 1000) / 10) + "%" : "–";
+      document.getElementById("churnRate").innerText = rate;
+    }
+
+    // Expiring memberships
+    const exp = await safeFetch("/api/analytics/expiring");
+    const expEl = document.getElementById("expiringList");
+    if (exp && exp.length) {
+      expEl.innerHTML = exp.slice(0,5).map(m => `<li>${m.user ? ((m.user.firstName||'') + ' ' + (m.user.lastName||'')).trim() : (m.email||'Unknown')} — ${m.membershipType||''} — ${m.endDate ? new Date(m.endDate).toLocaleDateString() : ''}</li>`).join('');
+    } else {
+      expEl.innerHTML = "<li>No expiring memberships.</li>";
+    }
+
+    // Revenue by plan chart
+    const revByPlan = await safeFetch("/api/analytics/revenue-by-plan");
+    if (revByPlan && revByPlan.length) {
+      const labels = revByPlan.map(r => r._id || 'unknown');
+      const data = revByPlan.map(r => r.revenue || 0);
+      const ctx = document.getElementById("revenuePlanChart");
+      new Chart(ctx, {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Revenue", data, backgroundColor: ['#4e73df','#1cc88a','#36b9cc','#f6c23e'] }] },
+        options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+      });
+    } else {
+      document.getElementById("revenuePlanChart").parentElement.innerHTML = "<div class='text-muted p-3'>No revenue data.</div>";
+    }
+
+    // Weekly checkins chart
+    const weekly = await safeFetch("/api/analytics/weekly-checkins");
+    if (weekly && weekly.length) {
+      const labels = weekly.map(r => r._id);
+      const data = weekly.map(r => r.count);
+      const ctx2 = document.getElementById("weeklyCheckinsChart");
+      new Chart(ctx2, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Check-ins", data, borderColor: "#4e73df", backgroundColor: "rgba(78,115,223,0.08)", fill:true }] },
+        options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+      });
+    } else {
+      document.getElementById("weeklyCheckinsChart").parentElement.innerHTML = "<div class='text-muted p-3'>No check-in data.</div>";
+    }
+
+    // Quick checkin form (keeps previous behavior)
     document.getElementById("checkinForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("checkinEmail").value;
-      const name = document.getElementById("checkinName").value;
-      const res = await fetch("/api/checkins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ email, name }),
-      });
-      const data = await res.json();
-      alert(data.message || 'Check-in recorded');
+      const email = document.getElementById("checkinEmail").value.trim();
+      const name = document.getElementById("checkinName").value.trim();
+      try {
+        const res = await fetch("/api/checkins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, name }) });
+        const data = await res.json();
+        document.getElementById("dashboardMessage").innerText = data.message || (data.error || "Check-in saved");
+        // optionally refresh weekly chart and totals
+      } catch (err) {
+        document.getElementById("dashboardMessage").innerText = "Check-in failed";
+      }
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      document.cookie = "token=; path=/; max-age=0";
-      window.location.href = "/";
-    });
   })();
   </script>
+
+  <%- include('partials/footer') %>
 </body>
 </html>

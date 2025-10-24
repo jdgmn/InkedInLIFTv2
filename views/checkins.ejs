@@ -1,19 +1,45 @@
-<%- include('layout', { body: `
-  <h2>Check-ins</h2>
-  <table class="table table-striped mt-3">
-    <thead>
-      <tr>
-        <th>Member</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${checkins.map(c => `
-        <tr>
-          <td>${c.user?.firstName || c.name || ''} ${c.user?.lastName || ''}</td>
-          <td>${c.checkinTime ? new Date(c.checkinTime).toLocaleString() : ''}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
-`}) %>
+<%- include('partials/header', { title: 'Check-ins' }) %>
+
+<h1>Check-ins</h1>
+
+<form id="quickCheckin" class="row g-2 mb-3">
+  <div class="col-md-4"><input id="ciEmail" class="form-control" placeholder="Email (optional)"></div>
+  <div class="col-md-4"><input id="ciName" class="form-control" placeholder="Name (optional)"></div>
+  <div class="col-md-2"><button class="btn btn-success">Check in</button></div>
+</form>
+
+<table class="table table-striped" id="checkinsTable">
+  <thead><tr><th>Time</th><th>Name</th><th>Email</th><th>Member</th><th>Actions</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<script>
+(async () => {
+  function getToken(){ try{ const t=localStorage.getItem("token"); if(t) return t; }catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
+  const token = getToken();
+  const headersAuth = token ? { Authorization: "Bearer " + token } : {};
+  const tbody = document.querySelector("#checkinsTable tbody");
+
+  document.getElementById("quickCheckin").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const payload = { email: document.getElementById("ciEmail").value.trim() || undefined, name: document.getElementById("ciName").value.trim() || undefined };
+    const res = await fetch("/api/checkins", { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    alert(data.message || "Check-in done");
+    load();
+  });
+
+  async function load(){
+    tbody.innerHTML = "<tr><td colspan='5'>Loading…</td></tr>";
+    const res = await fetch("/api/checkins", { headers: headersAuth });
+    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='5'>Failed to load (${res.status})</td></tr>`; return; }
+    const items = await res.json();
+    tbody.innerHTML = items.map(ci => `<tr data-id="${ci._id}"><td>${new Date(ci.checkinTime).toLocaleString()}</td><td>${ci.name||''}</td><td>${ci.email||''}</td><td>${ci.isMember ? 'Yes' : 'No'}</td><td><button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
+    document.querySelectorAll(".delBtn").forEach(b=>b.onclick=async (e)=>{ const id=e.target.closest("tr").dataset.id; if(!confirm("Delete checkin?")) return; const res=await fetch("/api/checkins/" + id, { method: "DELETE", headers: headersAuth }); if (res.ok) load(); else alert("Delete failed"); });
+  }
+
+  load();
+})();
+</script>
+
+<%- include('partials/footer') %>

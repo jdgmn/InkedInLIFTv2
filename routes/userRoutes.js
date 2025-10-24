@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const User = require("../models/User");
 const {
   registerUser,
   loginUser,
@@ -8,6 +9,17 @@ const {
   resetPassword,
 } = require("../controllers/userController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
+
+// Public: list users (dev-friendly)
+router.get("/", async (req, res) => {
+  try {
+    const users = await User.find().select("firstName lastName email role verified createdAt");
+    res.json(users);
+  } catch (err) {
+    console.error("Get users (public) error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // Public routes
 router.post("/register", registerUser);

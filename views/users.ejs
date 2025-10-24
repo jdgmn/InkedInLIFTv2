@@ -1,17 +1,93 @@
-<%- include('layout', { body: `
-<h1>Users</h1>
-<table class="table">
-    <thead>
-        <tr><th>Name</th><th>Email</th><th>Role</th></tr>
-    </thead>
-    <tbody>
-        ${users.map(user => `
-            <tr>
-                <td>${user.firstName || ''} ${user.lastName || ''}</td>
-                <td>${user.email}</td>
-                <td>${user.role}</td>
-            </tr>
-        `).join('')}
-    </tbody>
+<%- include('partials/header', { title: 'Users' }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Users</h1>
+  <button id="reloadUsers" class="btn btn-sm btn-secondary">Reload</button>
+</div>
+
+<!-- Register new user (dashboard) -->
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title">Register new user</h5>
+    <form id="dashboardRegisterForm" class="row g-2">
+      <div class="col-md-3"><input id="regFirst" class="form-control" placeholder="First name" required /></div>
+      <div class="col-md-3"><input id="regLast" class="form-control" placeholder="Last name" required /></div>
+      <div class="col-md-3"><input id="regEmail" type="email" class="form-control" placeholder="Email" required /></div>
+      <div class="col-md-2"><input id="regPassword" type="password" class="form-control" placeholder="Password" required /></div>
+      <div class="col-md-1">
+        <select id="regRole" class="form-select">
+          <option value="client">Client</option>
+          <option value="receptionist">Receptionist</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="col-12"><div id="registerMsg" class="mt-2"></div></div>
+    </form>
+  </div>
+</div>
+
+<table class="table table-striped" id="usersTable">
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Verified</th><th>Actions</th></tr></thead>
+  <tbody></tbody>
 </table>
-`}) %>
+
+<script>
+(async () => {
+  function getToken(){ try { const t = localStorage.getItem("token"); if (t) return t; } catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
+  const token = getToken();
+  const headersAuth = token ? { Authorization: "Bearer " + token } : {};
+  const tbody = document.querySelector("#usersTable tbody");
+  const registerForm = document.getElementById("dashboardRegisterForm");
+  const registerMsg = document.getElementById("registerMsg");
+
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    registerMsg.innerText = "";
+    const payload = {
+      firstName: document.getElementById("regFirst").value.trim(),
+      lastName: document.getElementById("regLast").value.trim(),
+      email: document.getElementById("regEmail").value.trim(),
+      password: document.getElementById("regPassword").value,
+      role: document.getElementById("regRole").value
+    };
+    const hdrs = { "Content-Type": "application/json", ...headersAuth };
+    const res = await fetch("/api/users/register", { method: "POST", headers: hdrs, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) { registerMsg.innerText = data.error || (data.message || "Registration failed"); registerMsg.className = "text-danger"; return; }
+    registerMsg.innerText = data.message || "User registered"; registerMsg.className = "text-success";
+    registerForm.reset();
+    setTimeout(load, 700);
+  });
+
+  async function load() {
+    tbody.innerHTML = "<tr><td colspan='5'>Loading…</td></tr>";
+    const res = await fetch("/api/users", { headers: headersAuth });
+    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='5'>Failed to load (${res.status})</td></tr>`; return; }
+    const users = await res.json();
+    tbody.innerHTML = users.map(u => `<tr data-id="${u._id}"><td>${(u.firstName||'') + ' ' + (u.lastName||'')}</td><td>${u.email}</td><td>${u.role}</td><td>${u.verified ? 'Yes' : 'No'}</td><td><button class="btn btn-sm btn-primary editBtn">Edit</button> <button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
+    attachHandlers();
+  }
+
+  function attachHandlers() {
+    document.querySelectorAll(".delBtn").forEach(btn => btn.onclick = async (e) => {
+      const id = e.target.closest("tr").dataset.id;
+      if (!confirm("Delete user?")) return;
+      const res = await fetch("/api/users/" + id, { method: "DELETE", headers: headersAuth });
+      if (!res.ok) { alert("Delete failed"); return; } load();
+    });
+    document.querySelectorAll(".editBtn").forEach(btn => btn.onclick = async (e) => {
+      const tr = e.target.closest("tr");
+      const id = tr.dataset.id;
+      const newFirst = prompt("New first name:", tr.children[0].innerText.split(" ")[0] || "");
+      if (newFirst === null) return;
+      const res = await fetch("/api/users/" + id, { method: "PUT", headers: { "Content-Type":"application/json", ...headersAuth }, body: JSON.stringify({ firstName: newFirst }) });
+      if (!res.ok) { alert("Update failed"); return; } load();
+    });
+  }
+
+  document.getElementById("reloadUsers").addEventListener("click", load);
+  load();
+})();
+</script>
+
+<%- include('partials/footer') %>
