@@ -49,8 +49,3 @@ Key endpoints (server JSON)
 - POST /api/memberships (protected)
 - GET /api/analytics/dashboard (protected, admin)
 - GET /api/analytics/expiring (protected)
-
-Troubleshooting
-- Ensure JWT_SECRET and MONGODB_URI are set.
-- If emails fail, check EMAIL_USER/EMAIL_PASS and allow less-secure apps or use app password.
-- Check server logs for detailed errors.
