@@ -89,7 +89,10 @@
       <div class="card p-3">
         <h5 class="mb-2">Quick Check-in</h5>
         <form id="checkinForm" class="mb-2">
-          <div class="mb-2"><input id="checkinEmail" class="form-control" placeholder="Email (optional)" /></div>
+          <div class="mb-2">
+            <input id="checkinEmail" class="form-control" placeholder="Email (optional)" list="emailList" />
+            <datalist id="emailList"></datalist>
+          </div>
           <div class="mb-2"><input id="checkinName" class="form-control" placeholder="Name (optional)" /></div>
           <button class="btn btn-success">Check in</button>
         </form>
@@ -283,6 +286,22 @@
     } else {
       document.getElementById("weeklyCheckinsChart").parentElement.innerHTML = "<div class='text-muted p-3'>No check-in data.</div>";
     }
+
+    // Populate email suggestions
+    async function populateEmailList() {
+      try {
+        const res = await fetch("/api/users");
+        if (res.ok) {
+          const users = await res.json();
+          const emails = users.map(u => u.email);
+          const datalist = document.getElementById("emailList");
+          datalist.innerHTML = emails.map(email => `<option value="${email}">`).join("");
+        }
+      } catch (err) {
+        console.error("Failed to load email suggestions:", err);
+      }
+    }
+    populateEmailList();
 
     // Quick checkin form (keeps previous behavior)
     document.getElementById("checkinForm").addEventListener("submit", async (e) => {

@@ -66,6 +66,11 @@ exports.createMembership = async (req, res) => {
 };
 
 // Get all memberships
+    // Auto-expire memberships that have passed their end date
+    await Membership.updateMany(
+      { status: "active", endDate: { $lt: new Date() } },
+      { $set: { status: "expired" } }
+    );
 exports.getMemberships = async (req, res) => {
   try {
     const memberships = await Membership.find().populate(

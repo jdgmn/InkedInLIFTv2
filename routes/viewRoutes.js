@@ -42,4 +42,9 @@ router.get("/selfcheckin", (req, res) => {
   res.render("selfcheckin");
 });
 
+// Bypass verification page (public for dev)
+router.get("/bypass-verification", (req, res) => {
+  res.render("bypass");
+});
+
 module.exports = router;

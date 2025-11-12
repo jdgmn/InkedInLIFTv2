@@ -4,7 +4,8 @@
 
 <form id="quickCheckin" class="row g-2 mb-3">
   <div class="col-md-4">
-    <input id="ciEmail" class="form-control" placeholder="Email (optional)">
+    <input id="ciEmail" class="form-control" placeholder="Email (optional)" list="emailList">
+    <datalist id="emailList"></datalist>
     <div id="emailValidation"></div>
   </div>
   <div class="col-md-4"><input id="ciName" class="form-control" placeholder="Name (optional)"></div>
@@ -73,6 +74,22 @@
     alert(data.message || "Check-in done");
     load();
   });
+
+  // Populate email suggestions
+  async function populateEmailList() {
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const users = await res.json();
+        const emails = users.map(u => u.email);
+        const datalist = document.getElementById("emailList");
+        datalist.innerHTML = emails.map(email => `<option value="${email}">`).join("");
+      }
+    } catch (err) {
+      console.error("Failed to load email suggestions:", err);
+    }
+  }
+  populateEmailList();
 
   // Add event listener for real-time email validation
   document.getElementById("ciEmail").addEventListener("input", updateEmailValidation);

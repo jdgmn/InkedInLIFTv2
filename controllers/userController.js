@@ -328,3 +328,14 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// GET unverified users (for bypass page)
+exports.getUnverifiedUsers = async (req, res) => {
+  try {
+    const users = await User.find({ verified: false }).select("firstName lastName email verificationToken");
+    res.json(users);
+  } catch (error) {
+    console.error("Get unverified users error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};

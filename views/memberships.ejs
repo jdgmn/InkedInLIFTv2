@@ -15,7 +15,10 @@
     <div class="card-body">
       <h5 class="card-title">Create membership</h5>
       <form id="createMembershipForm" class="row g-2">
-        <div class="col-md-4"><input id="memEmail" class="form-control" placeholder="User email" required /></div>
+        <div class="col-md-4">
+          <input id="memEmail" class="form-control" placeholder="User email" list="emailList" required />
+          <datalist id="emailList"></datalist>
+        </div>
         <div class="col-md-3">
           <select id="memType" class="form-select">
             <option value="monthly">Monthly</option>
@@ -45,6 +48,22 @@
     const headersAuth = token ? { Authorization: "Bearer " + token } : {};
     const tbody = document.querySelector("#membersTable tbody");
 
+    // Populate email suggestions
+    async function populateEmailList() {
+      try {
+        const res = await fetch("/api/users");
+        if (res.ok) {
+          const users = await res.json();
+          const emails = users.map(u => u.email);
+          const datalist = document.getElementById("emailList");
+          datalist.innerHTML = emails.map(email => `<option value="${email}">`).join("");
+        }
+      } catch (err) {
+        console.error("Failed to load email suggestions:", err);
+      }
+    }
+    populateEmailList();
+
     document.getElementById("createMembershipForm").addEventListener("submit", async (e)=>{
       e.preventDefault();
       const payload = { email: document.getElementById("memEmail").value.trim(), membershipType: document.getElementById("memType").value, price: parseFloat(document.getElementById("memPrice").value), paymentStatus: document.getElementById("memPayment").value };
@@ -66,7 +85,7 @@
 
     function attach(){
       document.querySelectorAll(".delBtn").forEach(b=>b.onclick=async (e)=>{ const id=e.target.closest("tr").dataset.id; if(!confirm("Delete membership?")) return; const res=await fetch("/api/memberships/" + id, { method: "DELETE", headers: headersAuth }); if (res.ok) load(); else alert("Delete failed"); });
-      document.querySelectorAll(".editBtn").forEach(b=>b.onclick=async (e)=>{ const tr=e.target.closest("tr"); const id=tr.dataset.id; const newStatus=prompt("New status (active/expired/cancelled):", tr.children[4].innerText); if(!newStatus) return; const res=await fetch("/api/memberships/" + id, { method: "PUT", headers: { "Content-Type":"application/json", ...headersAuth }, body: JSON.stringify({ status: newStatus }) }); if (res.ok) load(); else alert("Update failed"); });
+      document.querySelectorAll(".editBtn").forEach(b=>b.onclick=async (e)=>{ const tr=e.target.closest("tr"); const id=tr.dataset.id; const currentStatus=tr.children[4].innerText; const newStatus=prompt("New status (active/expired/cancelled):", currentStatus); if(!newStatus || newStatus === currentStatus) return; const res=await fetch("/api/memberships/" + id, { method: "PUT", headers: { "Content-Type":"application/json", ...headersAuth }, body: JSON.stringify({ status: newStatus }) }); if (res.ok) load(); else alert("Update failed"); });
     }
 
     load();

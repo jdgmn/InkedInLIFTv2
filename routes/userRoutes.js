@@ -10,6 +10,7 @@ const {
   adminCreateUser,
   updateUser,
   deleteUser,
+  getUnverifiedUsers,
 } = require("../controllers/userController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -37,5 +38,8 @@ router.post("/reset/:token", resetPassword);
 // Admin update and delete user routes
 router.put("/:id", protect, restrictTo("admin"), updateUser);
 router.delete("/:id", protect, restrictTo("admin"), deleteUser);
+
+// Get unverified users (for bypass page)
+router.get("/unverified", getUnverifiedUsers);
 
 module.exports = router;
