@@ -98,6 +98,101 @@
     </div>
   </div>
 
+  <!-- New Analytics Section -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h5 class="mb-3">Peak Hours</h5>
+        <canvas id="peakHoursChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h5 class="mb-3">Membership Trends</h5>
+        <canvas id="membershipTrendsChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h5 class="mb-3">Check-in Patterns by Day</h5>
+        <canvas id="checkinPatternsChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h5 class="mb-3">Membership Distribution</h5>
+        <canvas id="membershipDistributionChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h5 class="mb-3">Revenue Forecast</h5>
+        <canvas id="revenueForecastChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h5 class="mb-3">User Growth Metrics</h5>
+        <div class="row text-center">
+          <div class="col-4">
+            <h6 class="text-muted">Total Users</h6>
+            <h4 id="totalUsersGrowth">–</h4>
+          </div>
+          <div class="col-4">
+            <h6 class="text-muted">Last Month</h6>
+            <h4 id="usersLastMonth">–</h4>
+          </div>
+          <div class="col-4">
+            <h6 class="text-muted">Last Week</h6>
+            <h4 id="usersLastWeek">–</h4>
+          </div>
+        </div>
+        <hr>
+        <div class="row text-center">
+          <div class="col-6">
+            <h6 class="text-muted">Verified Users</h6>
+            <h4 id="verifiedUsers">–</h4>
+          </div>
+          <div class="col-6">
+            <h6 class="text-muted">Verification Rate</h6>
+            <h4 id="verificationRate">–%</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <h5 class="mb-3">Average Sessions per User</h5>
+        <div class="row text-center">
+          <div class="col-4">
+            <h6 class="text-muted">Total Check-ins (Last Month)</h6>
+            <h4 id="totalCheckinsMonth">–</h4>
+          </div>
+          <div class="col-4">
+            <h6 class="text-muted">Unique Users</h6>
+            <h4 id="uniqueUsersMonth">–</h4>
+          </div>
+          <div class="col-4">
+            <h6 class="text-muted">Avg Sessions/User</h6>
+            <h4 id="avgSessionsPerUser">–</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -203,6 +298,114 @@
         document.getElementById("dashboardMessage").innerText = "Check-in failed";
       }
     });
+
+    // Peak hours chart
+    const peakHours = await safeFetch("/api/analytics/peak-hours");
+    if (peakHours && peakHours.length) {
+      const labels = peakHours.map(h => `${h._id}:00`);
+      const data = peakHours.map(h => h.count);
+      const ctx = document.getElementById("peakHoursChart");
+      new Chart(ctx, {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Check-ins", data, backgroundColor: "#e74a3b" }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    } else {
+      document.getElementById("peakHoursChart").parentElement.innerHTML = "<div class='text-muted p-3'>No peak hours data.</div>";
+    }
+
+    // Membership trends chart
+    const membershipTrends = await safeFetch("/api/analytics/membership-trends");
+    if (membershipTrends && membershipTrends.length) {
+      const labels = membershipTrends.map(t => `${t._id.year}-${String(t._id.month).padStart(2, '0')}`);
+      const data = membershipTrends.map(t => t.count);
+      const ctx = document.getElementById("membershipTrendsChart");
+      new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [{ label: "New Members", data, borderColor: "#1cc88a", backgroundColor: "rgba(28,200,138,0.08)", fill: true }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    } else {
+      document.getElementById("membershipTrendsChart").parentElement.innerHTML = "<div class='text-muted p-3'>No membership trends data.</div>";
+    }
+
+    // Check-in patterns chart
+    const checkinPatterns = await safeFetch("/api/analytics/checkin-patterns");
+    if (checkinPatterns && checkinPatterns.length) {
+      const labels = checkinPatterns.map(p => p.day);
+      const membersData = checkinPatterns.map(p => p.members);
+      const walkinsData = checkinPatterns.map(p => p.walkins);
+      const ctx = document.getElementById("checkinPatternsChart");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Members", data: membersData, backgroundColor: "#4e73df" },
+            { label: "Walk-ins", data: walkinsData, backgroundColor: "#f6c23e" }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    } else {
+      document.getElementById("checkinPatternsChart").parentElement.innerHTML = "<div class='text-muted p-3'>No check-in patterns data.</div>";
+    }
+
+    // Membership distribution chart
+    const membershipDistribution = await safeFetch("/api/analytics/membership-distribution");
+    if (membershipDistribution && membershipDistribution.length) {
+      const labels = membershipDistribution.map(d => d._id);
+      const data = membershipDistribution.map(d => d.count);
+      const ctx = document.getElementById("membershipDistributionChart");
+      new Chart(ctx, {
+        type: "pie",
+        data: { labels, datasets: [{ data, backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'] }] },
+        options: { responsive: true }
+      });
+    } else {
+      document.getElementById("membershipDistributionChart").parentElement.innerHTML = "<div class='text-muted p-3'>No membership distribution data.</div>";
+    }
+
+    // Revenue forecast chart
+    const revenueForecast = await safeFetch("/api/analytics/revenue-forecast");
+    if (revenueForecast && revenueForecast.historicalData && revenueForecast.historicalData.length) {
+      const historicalLabels = revenueForecast.historicalData.map(d => `${d._id.year}-${String(d._id.month).padStart(2, '0')}`);
+      const historicalData = revenueForecast.historicalData.map(d => d.revenue);
+      const forecastLabel = "Next Month Forecast";
+      const forecastData = [...historicalData, revenueForecast.forecast.nextMonthRevenue];
+      const ctx = document.getElementById("revenueForecastChart");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [...historicalLabels, forecastLabel],
+          datasets: [
+            { label: "Historical Revenue", data: historicalData, borderColor: "#4e73df", backgroundColor: "rgba(78,115,223,0.08)", fill: true },
+            { label: "Forecast", data: forecastData, borderColor: "#e74a3b", borderDash: [5, 5], pointBackgroundColor: "#e74a3b" }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    } else {
+      document.getElementById("revenueForecastChart").parentElement.innerHTML = "<div class='text-muted p-3'>No revenue forecast data.</div>";
+    }
+
+    // User growth metrics
+    const userGrowth = await safeFetch("/api/analytics/user-growth");
+    if (userGrowth) {
+      document.getElementById("totalUsersGrowth").innerText = userGrowth.totalUsers ?? 0;
+      document.getElementById("usersLastMonth").innerText = userGrowth.usersLastMonth ?? 0;
+      document.getElementById("usersLastWeek").innerText = userGrowth.usersLastWeek ?? 0;
+      document.getElementById("verifiedUsers").innerText = userGrowth.verifiedUsers ?? 0;
+      document.getElementById("verificationRate").innerText = userGrowth.verificationRate ? (Math.round(userGrowth.verificationRate * 1000) / 10) + "%" : "0%";
+    }
+
+    // Average sessions per user
+    const avgSessions = await safeFetch("/api/analytics/average-sessions");
+    if (avgSessions) {
+      document.getElementById("totalCheckinsMonth").innerText = avgSessions.totalCheckins ?? 0;
+      document.getElementById("uniqueUsersMonth").innerText = avgSessions.uniqueUsers ?? 0;
+      document.getElementById("avgSessionsPerUser").innerText = avgSessions.avgSessionsPerUser ? Math.round(avgSessions.avgSessionsPerUser * 10) / 10 : 0;
+    }
 
   })();
   </script>

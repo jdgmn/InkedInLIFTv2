@@ -3,7 +3,10 @@
 <h1>Check-ins</h1>
 
 <form id="quickCheckin" class="row g-2 mb-3">
-  <div class="col-md-4"><input id="ciEmail" class="form-control" placeholder="Email (optional)"></div>
+  <div class="col-md-4">
+    <input id="ciEmail" class="form-control" placeholder="Email (optional)">
+    <div id="emailValidation"></div>
+  </div>
   <div class="col-md-4"><input id="ciName" class="form-control" placeholder="Name (optional)"></div>
   <div class="col-md-2"><button class="btn btn-success">Check in</button></div>
 </form>
@@ -20,14 +23,59 @@
   const headersAuth = token ? { Authorization: "Bearer " + token } : {};
   const tbody = document.querySelector("#checkinsTable tbody");
 
+  // Email validation
+  function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  function updateEmailValidation() {
+    const email = document.getElementById("ciEmail").value.trim();
+    const emailDiv = document.getElementById("emailValidation");
+
+    if (!email) {
+      emailDiv.innerHTML = "";
+      return;
+    }
+
+    if (validateEmail(email)) {
+      emailDiv.innerHTML = '<small class="text-success">Valid email format</small>';
+    } else {
+      emailDiv.innerHTML = '<small class="text-danger">Invalid email format</small>';
+    }
+  }
+
   document.getElementById("quickCheckin").addEventListener("submit", async (e)=>{
     e.preventDefault();
-    const payload = { email: document.getElementById("ciEmail").value.trim() || undefined, name: document.getElementById("ciName").value.trim() || undefined };
-    const res = await fetch("/api/checkins", { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+
+    const email = document.getElementById("ciEmail").value.trim() || undefined;
+    const name = document.getElementById("ciName").value.trim() || undefined;
+
+    // Client-side validation
+    if (email && !validateEmail(email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    if (!email && !name) {
+      alert("Please provide either an email or a name for check-in");
+      return;
+    }
+
+    const payload = { email, name };
+    const res = await fetch("/api/checkins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
     const data = await res.json();
     alert(data.message || "Check-in done");
     load();
   });
+
+  // Add event listener for real-time email validation
+  document.getElementById("ciEmail").addEventListener("input", updateEmailValidation);
 
   async function load(){
     tbody.innerHTML = "<tr><td colspan='5'>Loading…</td></tr>";

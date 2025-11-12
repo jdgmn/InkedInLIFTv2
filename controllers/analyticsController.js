@@ -212,3 +212,215 @@ exports.getChurnRate = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// Peak hours analysis for check-ins
+exports.getPeakHours = async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $group: {
+          _id: { $hour: "$checkinTime" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+    ];
+
+    const hours = await Checkin.aggregate(pipeline);
+    res.json(hours);
+  } catch (error) {
+    console.error("Peak hours error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Membership trends over time (monthly signups)
+exports.getMembershipTrends = async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+          revenue: { $sum: "$price" },
+        },
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 },
+      },
+    ];
+
+    const trends = await Membership.aggregate(pipeline);
+    res.json(trends);
+  } catch (error) {
+    console.error("Membership trends error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// User growth metrics
+exports.getUserGrowth = async (req, res) => {
+  try {
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(now.getMonth() - 1);
+
+    const lastWeek = new Date(now);
+    lastWeek.setDate(now.getDate() - 7);
+
+    const totalUsers = await User.countDocuments();
+    const usersLastMonth = await User.countDocuments({ createdAt: { $gte: lastMonth } });
+    const usersLastWeek = await User.countDocuments({ createdAt: { $gte: lastWeek } });
+
+    const verifiedUsers = await User.countDocuments({ verified: true });
+    const verificationRate = totalUsers > 0 ? verifiedUsers / totalUsers : 0;
+
+    res.json({
+      totalUsers,
+      usersLastMonth,
+      usersLastWeek,
+      verifiedUsers,
+      verificationRate,
+    });
+  } catch (error) {
+    console.error("User growth error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Check-in patterns by day of week
+exports.getCheckinPatterns = async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $group: {
+          _id: { $dayOfWeek: "$checkinTime" },
+          count: { $sum: 1 },
+          members: { $sum: { $cond: ["$isMember", 1, 0] } },
+          walkins: { $sum: { $cond: ["$isMember", 0, 1] } },
+        },
+      },
+      { $sort: { count: -1 } },
+    ];
+
+    const patterns = await Checkin.aggregate(pipeline);
+
+    // Map day numbers to names (1 = Sunday, 7 = Saturday)
+    const dayNames = ["", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const result = patterns.map(p => ({
+      day: dayNames[p._id],
+      count: p.count,
+      members: p.members,
+      walkins: p.walkins,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("Check-in patterns error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Membership distribution by type
+exports.getMembershipDistribution = async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $group: {
+          _id: "$membershipType",
+          count: { $sum: 1 },
+          revenue: { $sum: "$price" },
+        },
+      },
+      { $sort: { count: -1 } },
+    ];
+
+    const distribution = await Membership.aggregate(pipeline);
+    res.json(distribution);
+  } catch (error) {
+    console.error("Membership distribution error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Average session duration (if we had check-out times, but for now just check-in frequency)
+exports.getAverageSessions = async (req, res) => {
+  try {
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(now.getMonth() - 1);
+
+    const totalCheckins = await Checkin.countDocuments({ checkinTime: { $gte: lastMonth } });
+    const uniqueUsers = await Checkin.distinct("user", { checkinTime: { $gte: lastMonth } });
+
+    const avgSessionsPerUser = uniqueUsers.length > 0 ? totalCheckins / uniqueUsers.length : 0;
+
+    res.json({
+      totalCheckins,
+      uniqueUsers: uniqueUsers.length,
+      avgSessionsPerUser,
+    });
+  } catch (error) {
+    console.error("Average sessions error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Revenue forecast (simple linear projection)
+exports.getRevenueForecast = async (req, res) => {
+  try {
+    const now = new Date();
+    const last3Months = new Date(now);
+    last3Months.setMonth(now.getMonth() - 3);
+
+    const pipeline = [
+      { $match: { createdAt: { $gte: last3Months }, paymentStatus: "paid" } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          revenue: { $sum: "$price" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ];
+
+    const monthlyData = await Membership.aggregate(pipeline);
+
+    // Simple linear regression for forecasting
+    if (monthlyData.length >= 2) {
+      const n = monthlyData.length;
+      const sumX = monthlyData.reduce((sum, item, index) => sum + index, 0);
+      const sumY = monthlyData.reduce((sum, item) => sum + item.revenue, 0);
+      const sumXY = monthlyData.reduce((sum, item, index) => sum + index * item.revenue, 0);
+      const sumXX = monthlyData.reduce((sum, item, index) => sum + index * index, 0);
+
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+
+      const nextMonthRevenue = intercept + slope * n;
+
+      res.json({
+        historicalData: monthlyData,
+        forecast: {
+          nextMonthRevenue: Math.max(0, nextMonthRevenue),
+          growthRate: slope > 0 ? slope / (sumY / n) : 0,
+        },
+      });
+    } else {
+      res.json({
+        historicalData: monthlyData,
+        forecast: { nextMonthRevenue: 0, growthRate: 0 },
+      });
+    }
+  } catch (error) {
+    console.error("Revenue forecast error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};

@@ -12,6 +12,29 @@ const generateToken = (user) => {
   );
 };
 
+// Helper: validate password strength
+const validatePassword = (password) => {
+  if (!password || password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters long" };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one lowercase letter" };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one uppercase letter" };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one number" };
+  }
+  return { valid: true };
+};
+
+// Helper: validate email format
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
 // REGISTER (with verification email)
 exports.registerUser = async (req, res) => {
   try {
@@ -21,6 +44,17 @@ exports.registerUser = async (req, res) => {
       return res
         .status(400)
         .json({ error: "email, password, firstName and lastName are required" });
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.message });
     }
 
     const existingUser = await User.findOne({ email });
@@ -163,6 +197,12 @@ exports.resetPassword = async (req, res) => {
 
     if (!password) return res.status(400).json({ error: "Password is required" });
 
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.message });
+    }
+
     const user = await User.findOne({ resetToken: token });
     if (!user) return res.status(400).json({ error: "Invalid or expired token" });
 
@@ -192,6 +232,17 @@ exports.adminCreateUser = async (req, res) => {
     if (!email || !password || !firstName || !lastName)
       return res.status(400).json({ error: "email, password, firstName and lastName are required" });
 
+    // Validate email format
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.message });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "Email already exists" });
 
@@ -217,12 +268,51 @@ exports.adminCreateUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = (({ firstName, lastName, email, role, verified }) => ({ firstName, lastName, email, role, verified }))(req.body);
-    const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-passwordHash -__v");
+    const { firstName, lastName, email, role, verified, password } = req.body;
+    
+    // Validate email if provided
+    if (email && !validateEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Check if email is already taken by another user
+    if (email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: id } });
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
+    const updates = {};
+    if (firstName !== undefined) updates.firstName = firstName;
+    if (lastName !== undefined) updates.lastName = lastName;
+    if (email !== undefined) updates.email = email;
+    if (role !== undefined) updates.role = role;
+    if (verified !== undefined) updates.verified = verified;
+
+    const user = await User.findById(id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ message: "User updated", user });
+
+    // Update password if provided
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.message });
+      }
+      await user.setPassword(password);
+    }
+
+    // Apply other updates
+    Object.assign(user, updates);
+    await user.save();
+
+    const updatedUser = await User.findById(id).select("-passwordHash -__v");
+    res.json({ message: "User updated", user: updatedUser });
   } catch (error) {
     console.error("Update user error:", error);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: "Server error" });
   }
 };

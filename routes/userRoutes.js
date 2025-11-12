@@ -8,6 +8,8 @@ const {
   forgotPassword,
   resetPassword,
   adminCreateUser,
+  updateUser,
+  deleteUser,
 } = require("../controllers/userController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
@@ -31,5 +33,9 @@ router.get("/verify/:token", verifyEmail);
 router.post("/login", loginUser);
 router.post("/forgot", forgotPassword);
 router.post("/reset/:token", resetPassword);
+
+// Admin update and delete user routes
+router.put("/:id", protect, restrictTo("admin"), updateUser);
+router.delete("/:id", protect, restrictTo("admin"), deleteUser);
 
 module.exports = router;

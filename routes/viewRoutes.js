@@ -37,4 +37,9 @@ router.get("/checkins", async (req, res) => {
   res.render("checkins", { checkins });
 });
 
+// Self check-in page (public)
+router.get("/selfcheckin", (req, res) => {
+  res.render("selfcheckin");
+});
+
 module.exports = router;

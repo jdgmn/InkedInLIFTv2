@@ -2,11 +2,22 @@ const Checkin = require("../models/Checkin");
 const Membership = require("../models/Membership");
 const User = require("../models/User");
 
+// Helper: validate email format
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
 exports.checkinUser = async (req, res) => {
   try {
     const { email, name } = req.body;
     if (!email && !name)
       return res.status(400).json({ error: "email or name is required" });
+
+    // Validate email format if provided
+    if (email && !validateEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
 
     let user = null;
     if (email) user = await User.findOne({ email });
@@ -30,12 +41,17 @@ exports.checkinUser = async (req, res) => {
     });
     await checkin.save();
 
+    const populatedCheckin = await Checkin.findById(checkin._id).populate("user", "firstName lastName email");
+
     res.json({
       message: isMember ? "Member checked in!" : "Walk-in check-in recorded!",
-      checkin,
+      checkin: populatedCheckin,
     });
   } catch (error) {
     console.error("Checkin error:", error);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: "Server error" });
   }
 };
