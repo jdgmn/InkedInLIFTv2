@@ -11,13 +11,13 @@ router.get("/register", (req, res) => res.render("register"));
 // Protected pages with role-based access
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
-// Dashboard view (protected)
-router.get("/dashboard", protect, async (req, res) => {
+// Analytics (admin only)
+router.get("/analytics", protect, restrictTo("admin"), async (req, res) => {
   res.render("dashboard");
 });
 
-// Users page (admin only)
-router.get("/users", protect, restrictTo("admin"), async (req, res) => {
+// Users page (admin and receptionist)
+router.get("/users", protect, restrictTo("admin", "receptionist"), async (req, res) => {
   const users = await User.find().select("firstName lastName email role");
   res.render("users", { users });
 });
@@ -45,9 +45,13 @@ router.get("/selfcheckin", protect, restrictTo("admin", "receptionist", "client"
   res.render("selfcheckin");
 });
 
-// Analytics page (admin only) - redirect to dashboard for now
-router.get("/analytics", protect, restrictTo("admin"), (req, res) => {
-  res.redirect("/dashboard");
+// Dashboard redirect for receptionist
+router.get("/dashboard", protect, async (req, res) => {
+  if (req.user.role === "receptionist") {
+    res.redirect("/users");
+  } else {
+    res.redirect("/analytics");
+  }
 });
 
 // Bypass verification page (public for dev)

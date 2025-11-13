@@ -5,10 +5,10 @@
   <button id="reloadUsers" class="btn btn-sm btn-secondary">Reload</button>
 </div>
 
-<!-- Register new user (dashboard) -->
+<!-- Create new user (dashboard) -->
 <div class="card mb-4">
   <div class="card-body">
-    <h5 class="card-title">Register new user</h5>
+    <h5 class="card-title">Create new user</h5>
     <form id="dashboardRegisterForm" class="row g-2">
       <div class="col-md-3"><input id="regFirst" class="form-control" placeholder="First name" required /></div>
       <div class="col-md-3"><input id="regLast" class="form-control" placeholder="Last name" required /></div>
@@ -21,7 +21,18 @@
           <option value="admin">Admin</option>
         </select>
       </div>
-      <div class="col-12"><div id="registerMsg" class="mt-2"></div></div>
+      <div class="col-md-1">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="regVerified">
+          <label class="form-check-label" for="regVerified">
+            Verified
+          </label>
+        </div>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Create User</button>
+        <div id="registerMsg" class="mt-2"></div>
+      </div>
     </form>
   </div>
 </div>
@@ -101,7 +112,8 @@
       lastName: document.getElementById("regLast").value.trim(),
       email: document.getElementById("regEmail").value.trim(),
       password: document.getElementById("regPassword").value,
-      role: document.getElementById("regRole").value
+      role: document.getElementById("regRole").value,
+      verified: document.getElementById("regVerified").checked
     };
     const hdrs = { "Content-Type": "application/json", ...headersAuth };
     // choose admin-create endpoint if admin token is present, otherwise public register

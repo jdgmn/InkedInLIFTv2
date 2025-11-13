@@ -36,9 +36,9 @@ router.post("/login", loginUser);
 router.post("/forgot", forgotPassword);
 router.post("/reset/:token", resetPassword);
 
-// Admin update and delete user routes
-router.put("/:id", protect, restrictTo("admin"), updateUser);
-router.delete("/:id", protect, restrictTo("admin"), deleteUser);
+// Admin/receptionist update and delete user routes
+router.put("/:id", protect, restrictTo("admin", "receptionist"), updateUser);
+router.delete("/:id", protect, restrictTo("admin", "receptionist"), deleteUser);
 
 // Get current user info (for role-based UI)
 router.get("/me", protect, getCurrentUser);

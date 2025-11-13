@@ -48,14 +48,15 @@
 
           // Show/hide navigation items based on role
           if (role === "admin") {
-            // Admin sees everything
+            // Admin sees everything except analytics (dashboard is analytics)
+            document.getElementById("analyticsNav").style.display = "block";
             document.getElementById("usersNav").style.display = "block";
             document.getElementById("membershipsNav").style.display = "block";
             document.getElementById("checkinsNav").style.display = "block";
             document.getElementById("selfcheckinNav").style.display = "block";
-            document.getElementById("analyticsNav").style.display = "block";
           } else if (role === "receptionist") {
-            // Receptionist sees memberships, checkins, self checkin
+            // Receptionist sees users (as dashboard), memberships, checkins, self checkin
+            document.getElementById("usersNav").style.display = "block";
             document.getElementById("membershipsNav").style.display = "block";
             document.getElementById("checkinsNav").style.display = "block";
             document.getElementById("selfcheckinNav").style.display = "block";

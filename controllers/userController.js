@@ -38,7 +38,7 @@ const validateEmail = (email) => {
 // REGISTER (with verification email)
 exports.registerUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role } = req.body;
+    const { email, password, firstName, lastName, role, verified } = req.body;
 
     if (!email || !password || !firstName || !lastName) {
       return res
@@ -63,7 +63,7 @@ exports.registerUser = async (req, res) => {
 
     const verificationToken = crypto.randomBytes(20).toString("hex");
     const roleToAssign =
-      req.user && req.user.role === "admin" && req.body.role
+      req.user && (req.user.role === "admin" || req.user.role === "receptionist") && req.body.role
         ? req.body.role
         : "client";
 
@@ -73,11 +73,18 @@ exports.registerUser = async (req, res) => {
       lastName,
       role: roleToAssign,
       verificationToken,
-      verified: false,
+      verified: req.user && (req.user.role === "admin" || req.user.role === "receptionist") ? (verified !== undefined ? verified : false) : false,
     });
 
     await user.setPassword(password);
     await user.save();
+
+    // Skip email verification if created by admin/receptionist and verified is true
+    if (req.user && (req.user.role === "admin" || req.user.role === "receptionist") && verified) {
+      user.verificationToken = undefined;
+      await user.save();
+      return res.json({ message: "User created successfully" });
+    }
 
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
     const verifyLink = `${baseUrl}/api/users/verify/${verificationToken}`;
