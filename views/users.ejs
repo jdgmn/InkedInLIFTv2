@@ -31,6 +31,59 @@
   <tbody></tbody>
 </table>
 
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editUserForm">
+          <div class="mb-3">
+            <label for="editFirstName" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="editFirstName" required>
+          </div>
+          <div class="mb-3">
+            <label for="editLastName" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="editLastName" required>
+          </div>
+          <div class="mb-3">
+            <label for="editEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="editEmail" required>
+          </div>
+          <div class="mb-3">
+            <label for="editRole" class="form-label">Role</label>
+            <select class="form-select" id="editRole">
+              <option value="client">Client</option>
+              <option value="receptionist">Receptionist</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="editVerified">
+              <label class="form-check-label" for="editVerified">
+                Verified
+              </label>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="editPassword" class="form-label">New Password (leave blank to keep current)</label>
+            <input type="password" class="form-control" id="editPassword">
+          </div>
+          <div id="editUserMsg"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEditUserBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (async () => {
   function getToken(){ try { const t = localStorage.getItem("token"); if (t) return t; } catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
@@ -80,10 +133,58 @@
     document.querySelectorAll(".editBtn").forEach(btn => btn.onclick = async (e) => {
       const tr = e.target.closest("tr");
       const id = tr.dataset.id;
-      const newFirst = prompt("New first name:", tr.children[0].innerText.split(" ")[0] || "");
-      if (newFirst === null) return;
-      const res = await fetch("/api/users/" + id, { method: "PUT", headers: { "Content-Type":"application/json", ...headersAuth }, body: JSON.stringify({ firstName: newFirst }) });
-      if (!res.ok) { alert("Update failed"); return; } load();
+      const nameParts = tr.children[0].innerText.split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      const email = tr.children[1].innerText;
+      const role = tr.children[2].innerText;
+      const verified = tr.children[3].innerText === "Yes";
+
+      // Populate modal
+      document.getElementById("editFirstName").value = firstName;
+      document.getElementById("editLastName").value = lastName;
+      document.getElementById("editEmail").value = email;
+      document.getElementById("editRole").value = role;
+      document.getElementById("editVerified").checked = verified;
+      document.getElementById("editPassword").value = "";
+      document.getElementById("editUserMsg").innerText = "";
+
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById("editUserModal"));
+      modal.show();
+
+      // Handle save
+      const saveBtn = document.getElementById("saveEditUserBtn");
+      const handleSave = async () => {
+        const payload = {
+          firstName: document.getElementById("editFirstName").value.trim(),
+          lastName: document.getElementById("editLastName").value.trim(),
+          email: document.getElementById("editEmail").value.trim(),
+          role: document.getElementById("editRole").value,
+          verified: document.getElementById("editVerified").checked
+        };
+        const password = document.getElementById("editPassword").value.trim();
+        if (password) payload.password = password;
+
+        const res = await fetch("/api/users/" + id, { method: "PUT", headers: { "Content-Type":"application/json", ...headersAuth }, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById("editUserMsg").innerText = data.error || "Update failed";
+          document.getElementById("editUserMsg").className = "text-danger";
+          return;
+        }
+        document.getElementById("editUserMsg").innerText = "Updated successfully";
+        document.getElementById("editUserMsg").className = "text-success";
+        modal.hide();
+        load();
+      };
+
+      saveBtn.onclick = handleSave;
+
+      // Clean up event listener when modal is hidden
+      document.getElementById("editUserModal").addEventListener("hidden.bs.modal", () => {
+        saveBtn.onclick = null;
+      }, { once: true });
     });
   }
 
