@@ -115,6 +115,6 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 ## TO DO
 
 - Front-End Streamlining
-- - Dashboad Analytics need to be polished
-- - Membership Page is incomplete
-- - General UI and UX polish needed
+   - Dashboad Analytics need to be polished
+   - Membership Page is incomplete
+   - General UI and UX polish needed
