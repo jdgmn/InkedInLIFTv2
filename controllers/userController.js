@@ -83,6 +83,7 @@ exports.registerUser = async (req, res) => {
       role: roleToAssign,
       verificationToken,
       verified: req.user && (req.user.role === "admin" || req.user.role === "receptionist") ? (verified !== undefined ? verified : false) : false,
+      createdBy: req.user ? req.user._id : null,
     });
 
     // Set password only if provided
@@ -334,6 +335,7 @@ exports.updateUser = async (req, res) => {
 
     // Apply other updates
     Object.assign(user, updates);
+    user.updatedBy = req.user ? req.user._id : null;
     await user.save();
 
     const updatedUser = await User.findById(id).select("-passwordHash -__v");

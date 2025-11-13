@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 const MembershipSchema = new mongoose.Schema(
   {
-    user: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User", 
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: [true, "User is required for membership"]
     },
     membershipType: {
@@ -15,8 +15,8 @@ const MembershipSchema = new mongoose.Schema(
       },
       required: [true, "Membership type is required"],
     },
-    price: { 
-      type: Number, 
+    price: {
+      type: Number,
       required: [true, "Price is required"],
       min: [0, "Price cannot be negative"],
       validate: {
@@ -44,6 +44,9 @@ const MembershipSchema = new mongoose.Schema(
       },
       default: "active",
     },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    deletedAt: { type: Date },
   },
   { timestamps: true }
 );
@@ -76,9 +79,24 @@ MembershipSchema.methods.isExpired = function() {
   return this.endDate && new Date() > this.endDate;
 };
 
+// Indexes for performance
+MembershipSchema.index({ user: 1, status: 1, endDate: 1 }); // For active membership queries
+MembershipSchema.index({ endDate: 1 }); // For expiration queries
+
 // Method to check if membership is active and valid
 MembershipSchema.methods.isActive = function() {
   return this.status === "active" && !this.isExpired();
+};
+
+// Soft delete method
+MembershipSchema.methods.softDelete = function() {
+  this.deletedAt = new Date();
+  return this.save();
+};
+
+// Check if membership is deleted
+MembershipSchema.methods.isDeleted = function() {
+  return !!this.deletedAt;
 };
 
 module.exports = mongoose.model("Membership", MembershipSchema);

@@ -27,7 +27,21 @@ const checkinSchema = new mongoose.Schema({
   checkinTime: { type: Date, default: Date.now },
   checkoutTime: { type: Date },
   isMember: { type: Boolean, default: false },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  deletedAt: { type: Date },
 }, { timestamps: true });
+
+// Indexes for performance
+checkinSchema.index({ checkinTime: -1 }); // For recent checkins
+checkinSchema.index({ user: 1, checkinTime: -1 }); // For user checkin history
+checkinSchema.index({ checkoutTime: 1 }); // For active sessions
+
+// Virtual for session duration
+checkinSchema.virtual('sessionDuration').get(function() {
+  if (!this.checkoutTime) return null;
+  return this.checkoutTime - this.checkinTime;
+});
 
 // Custom validation: At least one of user, email, or name must be provided
 checkinSchema.pre("validate", function(next) {
@@ -38,5 +52,24 @@ checkinSchema.pre("validate", function(next) {
   }
   next();
 });
+
+// Validation: checkoutTime must be after checkinTime
+checkinSchema.pre("validate", function(next) {
+  if (this.checkoutTime && this.checkoutTime <= this.checkinTime) {
+    this.invalidate("checkoutTime", "Checkout time must be after checkin time");
+  }
+  next();
+});
+
+// Soft delete method
+checkinSchema.methods.softDelete = function() {
+  this.deletedAt = new Date();
+  return this.save();
+};
+
+// Check if checkin is deleted
+checkinSchema.methods.isDeleted = function() {
+  return !!this.deletedAt;
+};
 
 module.exports = mongoose.model("Checkin", checkinSchema);

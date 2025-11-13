@@ -50,6 +50,7 @@ exports.createMembership = async (req, res) => {
       startDate: startDate || new Date(),
       paymentStatus: paymentStatus || "paid",
       status: "active",
+      createdBy: req.user ? req.user._id : null,
     });
 
     await membership.save();
@@ -136,6 +137,7 @@ exports.updateMembership = async (req, res) => {
       membership.startDate = new Date(startDate);
     }
 
+    membership.updatedBy = req.user ? req.user._id : null;
     await membership.save();
     
     const updatedMembership = await Membership.findById(id).populate("user", "email firstName lastName");

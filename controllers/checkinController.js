@@ -43,6 +43,7 @@ exports.checkinUser = async (req, res) => {
       name: name || (user ? `${user.firstName} ${user.lastName}` : undefined),
       email: email || (user ? user.email : undefined),
       isMember,
+      createdBy: req.user ? req.user._id : null,
     });
     await checkin.save();
 
@@ -73,6 +74,7 @@ exports.checkoutUser = async (req, res) => {
     }
 
     checkin.checkoutTime = new Date();
+    checkin.updatedBy = req.user ? req.user._id : null;
     await checkin.save();
 
     const populatedCheckin = await Checkin.findById(checkin._id).populate("user", "firstName lastName email");

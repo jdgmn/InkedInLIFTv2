@@ -19,7 +19,7 @@ router.get("/", protect, restrictTo("admin", "receptionist"), async (req, res) =
 });
 
 // Protected checkout
-router.put("/:id/checkout", protect, restrictTo("admin", "receptionist", "client"), checkoutUser);
+router.put("/:id/checkout", protect, restrictTo("admin", "receptionist"), checkoutUser);
 
 // Protected delete
 router.delete("/:id", protect, restrictTo("admin", "receptionist"), deleteCheckin);
