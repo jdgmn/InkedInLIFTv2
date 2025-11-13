@@ -8,7 +8,7 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 - **User Registration & Authentication**: Secure signup with email verification and JWT-based login
 - **Role-Based Access**: Admin, Receptionist, and Client roles with appropriate permissions
 - **Membership Management**: Create and track memberships (Monthly, Quarterly, Annual)
-- **Check-in System**: Self check-in page and admin check-in functionality
+- **Check-in System with Check-out**: Self check-in page and admin check-in and check-out functionality
 - **Analytics Dashboard**: Revenue tracking, user growth metrics, peak hours analysis
 - **Email Notifications**: Automated verification emails and membership reminders
 
@@ -117,7 +117,6 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 - Front-End Streamlining
    - Dashboad and role-based default pages needs to be polished
    - Users page needs format fixing
-   - to remove: analytics tab sa header ng admin
    - self-check in page ui polishes
    - I left the seeder code, we should probably remove that one?
    - let me know if I missed a functionality or there is a process decision we can optimise
