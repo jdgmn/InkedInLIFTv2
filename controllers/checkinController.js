@@ -20,7 +20,12 @@ exports.checkinUser = async (req, res) => {
     }
 
     let user = null;
-    if (email) user = await User.findOne({ email });
+    if (email) {
+      user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ error: "Unregistered users cannot check in. Please register first." });
+      }
+    }
 
     // Determine membership status
     let isMember = false;
@@ -44,7 +49,7 @@ exports.checkinUser = async (req, res) => {
     const populatedCheckin = await Checkin.findById(checkin._id).populate("user", "firstName lastName email");
 
     res.json({
-      message: isMember ? "Member checked in!" : "Walk-in check-in recorded!",
+      message: isMember ? "Member checked in!" : "User checked in!",
       checkin: populatedCheckin,
     });
   } catch (error) {
@@ -52,6 +57,32 @@ exports.checkinUser = async (req, res) => {
     if (error.name === "ValidationError") {
       return res.status(400).json({ error: error.message });
     }
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// CHECKOUT user
+exports.checkoutUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const checkin = await Checkin.findById(id);
+    if (!checkin) return res.status(404).json({ error: "Checkin not found" });
+
+    if (checkin.checkoutTime) {
+      return res.status(400).json({ error: "Already checked out" });
+    }
+
+    checkin.checkoutTime = new Date();
+    await checkin.save();
+
+    const populatedCheckin = await Checkin.findById(checkin._id).populate("user", "firstName lastName email");
+
+    res.json({
+      message: "Checked out successfully",
+      checkin: populatedCheckin,
+    });
+  } catch (error) {
+    console.error("Checkout error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };

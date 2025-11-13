@@ -24,7 +24,6 @@
           <li class="nav-item" id="membershipsNav" style="display: none;"><a class="nav-link" href="/memberships">Memberships</a></li>
           <li class="nav-item" id="checkinsNav" style="display: none;"><a class="nav-link" href="/checkins">Check-ins</a></li>
           <li class="nav-item" id="selfcheckinNav" style="display: none;"><a class="nav-link" href="/selfcheckin">Self Check-In</a></li>
-          <li class="nav-item" id="analyticsNav" style="display: none;"><a class="nav-link" href="/dashboard">Analytics</a></li>
         </ul>
         <div class="d-flex">
           <button id="logoutBtn" class="btn btn-outline-light btn-sm">Logout</button>
@@ -49,7 +48,6 @@
           // Show/hide navigation items based on role
           if (role === "admin") {
             // Admin sees everything except analytics (dashboard is analytics)
-            document.getElementById("analyticsNav").style.display = "block";
             document.getElementById("usersNav").style.display = "block";
             document.getElementById("membershipsNav").style.display = "block";
             document.getElementById("checkinsNav").style.display = "block";

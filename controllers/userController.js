@@ -40,10 +40,10 @@ exports.registerUser = async (req, res) => {
   try {
     const { email, password, firstName, lastName, role, verified } = req.body;
 
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !firstName || !lastName) {
       return res
         .status(400)
-        .json({ error: "email, password, firstName and lastName are required" });
+        .json({ error: "email, firstName and lastName are required" });
     }
 
     // Validate email format
@@ -51,10 +51,23 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // Validate password strength
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({ error: passwordValidation.message });
+    // Determine role
+    const roleToAssign =
+      req.user && (req.user.role === "admin" || req.user.role === "receptionist") && req.body.role
+        ? req.body.role
+        : "client";
+
+    // Password is required unless role is client
+    if (roleToAssign !== "client" && !password) {
+      return res.status(400).json({ error: "Password is required for non-client roles" });
+    }
+
+    // Validate password strength if provided
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.message });
+      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -62,10 +75,6 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ error: "Email already exists" });
 
     const verificationToken = crypto.randomBytes(20).toString("hex");
-    const roleToAssign =
-      req.user && (req.user.role === "admin" || req.user.role === "receptionist") && req.body.role
-        ? req.body.role
-        : "client";
 
     const user = new User({
       email,
@@ -76,7 +85,10 @@ exports.registerUser = async (req, res) => {
       verified: req.user && (req.user.role === "admin" || req.user.role === "receptionist") ? (verified !== undefined ? verified : false) : false,
     });
 
-    await user.setPassword(password);
+    // Set password only if provided
+    if (password) {
+      await user.setPassword(password);
+    }
     await user.save();
 
     // Skip email verification if created by admin/receptionist and verified is true
@@ -236,18 +248,26 @@ exports.resetPassword = async (req, res) => {
 exports.adminCreateUser = async (req, res) => {
   try {
     const { email, password, firstName, lastName, role } = req.body;
-    if (!email || !password || !firstName || !lastName)
-      return res.status(400).json({ error: "email, password, firstName and lastName are required" });
+    if (!email || !firstName || !lastName)
+      return res.status(400).json({ error: "email, firstName and lastName are required" });
 
     // Validate email format
     if (!validateEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // Validate password strength
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({ error: passwordValidation.message });
+    // Password is required unless role is client
+    const roleToAssign = role || "client";
+    if (roleToAssign !== "client" && !password) {
+      return res.status(400).json({ error: "Password is required for non-client roles" });
+    }
+
+    // Validate password strength if provided
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.message });
+      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -257,11 +277,14 @@ exports.adminCreateUser = async (req, res) => {
       email,
       firstName,
       lastName,
-      role: role || "client",
+      role: roleToAssign,
       verified: true, // admin-created => verified
     });
 
-    await user.setPassword(password);
+    // Set password only if provided
+    if (password) {
+      await user.setPassword(password);
+    }
     await user.save();
 
     res.status(201).json({ message: "User created by admin", user: { id: user._id, email: user.email, role: user.role } });

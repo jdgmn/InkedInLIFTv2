@@ -25,6 +25,7 @@ const checkinSchema = new mongoose.Schema({
     }
   },
   checkinTime: { type: Date, default: Date.now },
+  checkoutTime: { type: Date },
   isMember: { type: Boolean, default: false },
 }, { timestamps: true });
 

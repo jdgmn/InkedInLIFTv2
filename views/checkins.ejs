@@ -4,7 +4,7 @@
 
 <form id="quickCheckin" class="row g-2 mb-3">
   <div class="col-md-4">
-    <input id="ciEmail" class="form-control" placeholder="Email (optional)" list="emailList">
+    <input id="ciEmail" class="form-control" placeholder="Email" list="emailList" required>
     <datalist id="emailList"></datalist>
     <div id="emailValidation"></div>
   </div>
@@ -12,8 +12,15 @@
   <div class="col-md-2"><button class="btn btn-success">Check in</button></div>
 </form>
 
+<div class="form-check mb-3">
+  <input class="form-check-input" type="checkbox" id="hideCheckedOut" checked>
+  <label class="form-check-label" for="hideCheckedOut">
+    Hide checked-out users
+  </label>
+</div>
+
 <table class="table table-striped" id="checkinsTable">
-  <thead><tr><th>Time</th><th>Name</th><th>Email</th><th>Member</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Check-in Time</th><th>Check-out Time</th><th>Name</th><th>Email</th><th>Member</th><th>Actions</th></tr></thead>
   <tbody></tbody>
 </table>
 
@@ -53,13 +60,13 @@
     const name = document.getElementById("ciName").value.trim() || undefined;
 
     // Client-side validation
-    if (email && !validateEmail(email)) {
-      alert("Please enter a valid email address");
+    if (!email) {
+      alert("Email is required for check-in");
       return;
     }
 
-    if (!email && !name) {
-      alert("Please provide either an email or a name for check-in");
+    if (!validateEmail(email)) {
+      alert("Please enter a valid email address");
       return;
     }
 
@@ -94,12 +101,20 @@
   // Add event listener for real-time email validation
   document.getElementById("ciEmail").addEventListener("input", updateEmailValidation);
 
+  // Add event listener for hide checked-out filter
+  document.getElementById("hideCheckedOut").addEventListener("change", load);
+
   async function load(){
-    tbody.innerHTML = "<tr><td colspan='5'>Loading…</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
     const res = await fetch("/api/checkins", { headers: headersAuth });
-    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='5'>Failed to load (${res.status})</td></tr>`; return; }
-    const items = await res.json();
-    tbody.innerHTML = items.map(ci => `<tr data-id="${ci._id}"><td>${new Date(ci.checkinTime).toLocaleString()}</td><td>${ci.name||''}</td><td>${ci.email||''}</td><td>${ci.isMember ? 'Yes' : 'No'}</td><td><button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
+    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='6'>Failed to load (${res.status})</td></tr>`; return; }
+    let items = await res.json();
+    const hideCheckedOut = document.getElementById("hideCheckedOut").checked;
+    if (hideCheckedOut) {
+      items = items.filter(ci => !ci.checkoutTime);
+    }
+    tbody.innerHTML = items.map(ci => `<tr data-id="${ci._id}"><td>${new Date(ci.checkinTime).toLocaleString()}</td><td>${ci.checkoutTime ? new Date(ci.checkoutTime).toLocaleString() : ''}</td><td>${ci.name||''}</td><td>${ci.email||''}</td><td>${ci.isMember ? 'Yes' : 'No'}</td><td>${ci.checkoutTime ? '' : '<button class="btn btn-sm btn-warning checkoutBtn">Checkout</button>'} <button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
+    document.querySelectorAll(".checkoutBtn").forEach(b=>b.onclick=async (e)=>{ const id=e.target.closest("tr").dataset.id; if(!confirm("Checkout this user?")) return; const res=await fetch("/api/checkins/" + id + "/checkout", { method: "PUT", headers: headersAuth }); if (res.ok) load(); else alert("Checkout failed"); });
     document.querySelectorAll(".delBtn").forEach(b=>b.onclick=async (e)=>{ const id=e.target.closest("tr").dataset.id; if(!confirm("Delete checkin?")) return; const res=await fetch("/api/checkins/" + id, { method: "DELETE", headers: headersAuth }); if (res.ok) load(); else alert("Delete failed"); });
   }
 

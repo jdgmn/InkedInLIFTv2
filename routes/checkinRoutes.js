@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Checkin = require("../models/Checkin");
-const { checkinUser, deleteCheckin } = require("../controllers/checkinController");
+const { checkinUser, checkoutUser, deleteCheckin } = require("../controllers/checkinController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
 // Protected endpoint - create checkin
@@ -17,6 +17,9 @@ router.get("/", protect, restrictTo("admin", "receptionist"), async (req, res) =
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Protected checkout
+router.put("/:id/checkout", protect, restrictTo("admin", "receptionist", "client"), checkoutUser);
 
 // Protected delete
 router.delete("/:id", protect, restrictTo("admin", "receptionist"), deleteCheckin);
