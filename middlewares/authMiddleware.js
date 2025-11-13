@@ -4,13 +4,18 @@ const User = require("../models/User");
 // Verify the token and attach the user to req.user
 exports.protect = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization || req.headers["x-access-token"] || "";
+    let token = req.headers.authorization || req.headers["x-access-token"] || "";
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Not authorized, token missing" });
+    if (token && token.startsWith("Bearer ")) {
+      token = token.split(" ")[1];
+    } else {
+      // Check for token in cookies
+      token = req.cookies.token;
     }
 
-    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Not authorized, token missing" });
+    }
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);

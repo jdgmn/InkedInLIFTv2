@@ -20,10 +20,11 @@
       <div class="collapse navbar-collapse" id="navCollapse">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="/users">Users</a></li>
-          <li class="nav-item"><a class="nav-link" href="/memberships">Memberships</a></li>
-          <li class="nav-item"><a class="nav-link" href="/checkins">Check-ins</a></li>
-          <li class="nav-item"><a class="nav-link" href="/selfcheckin">Self Check-In</a></li>
+          <li class="nav-item" id="usersNav" style="display: none;"><a class="nav-link" href="/users">Users</a></li>
+          <li class="nav-item" id="membershipsNav" style="display: none;"><a class="nav-link" href="/memberships">Memberships</a></li>
+          <li class="nav-item" id="checkinsNav" style="display: none;"><a class="nav-link" href="/checkins">Check-ins</a></li>
+          <li class="nav-item" id="selfcheckinNav" style="display: none;"><a class="nav-link" href="/selfcheckin">Self Check-In</a></li>
+          <li class="nav-item" id="analyticsNav" style="display: none;"><a class="nav-link" href="/dashboard">Analytics</a></li>
         </ul>
         <div class="d-flex">
           <button id="logoutBtn" class="btn btn-outline-light btn-sm">Logout</button>
@@ -31,5 +32,42 @@
       </div>
     </div>
   </nav>
+
+  <script>
+    // Role-based navigation visibility
+    (async () => {
+      function getToken(){ try { const t = localStorage.getItem("token"); if (t) return t; } catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        const res = await fetch("/api/users/me", { headers: { Authorization: "Bearer " + token } });
+        if (res.ok) {
+          const user = await res.json();
+          const role = user.role;
+
+          // Show/hide navigation items based on role
+          if (role === "admin") {
+            // Admin sees everything
+            document.getElementById("usersNav").style.display = "block";
+            document.getElementById("membershipsNav").style.display = "block";
+            document.getElementById("checkinsNav").style.display = "block";
+            document.getElementById("selfcheckinNav").style.display = "block";
+            document.getElementById("analyticsNav").style.display = "block";
+          } else if (role === "receptionist") {
+            // Receptionist sees memberships, checkins, self checkin
+            document.getElementById("membershipsNav").style.display = "block";
+            document.getElementById("checkinsNav").style.display = "block";
+            document.getElementById("selfcheckinNav").style.display = "block";
+          } else if (role === "client") {
+            // Client only sees self checkin
+            document.getElementById("selfcheckinNav").style.display = "block";
+          }
+        }
+      } catch (e) {
+        console.error("Failed to get user role:", e);
+      }
+    })();
+  </script>
 
   <main class="site-container container">

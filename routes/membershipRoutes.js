@@ -12,6 +12,6 @@ const {
 router.post("/", protect, restrictTo("admin", "receptionist"), createMembership);
 router.get("/", protect, restrictTo("admin", "receptionist"), getMemberships);
 router.put("/:id", protect, restrictTo("admin", "receptionist"), updateMembership);
-router.delete("/:id", protect, restrictTo("admin"), deleteMembership);
+router.delete("/:id", protect, restrictTo("admin", "receptionist"), deleteMembership);
 
 module.exports = router;

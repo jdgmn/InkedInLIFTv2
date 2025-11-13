@@ -329,6 +329,23 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+// GET current user info (for role-based UI)
+exports.getCurrentUser = async (req, res) => {
+  try {
+    res.json({
+      id: req.user._id,
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      role: req.user.role,
+      verified: req.user.verified
+    });
+  } catch (error) {
+    console.error("Get current user error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 // GET unverified users (for bypass page)
 exports.getUnverifiedUsers = async (req, res) => {
   try {

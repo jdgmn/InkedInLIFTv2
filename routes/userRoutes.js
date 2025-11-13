@@ -10,6 +10,7 @@ const {
   adminCreateUser,
   updateUser,
   deleteUser,
+  getCurrentUser,
   getUnverifiedUsers,
 } = require("../controllers/userController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
@@ -26,7 +27,7 @@ router.get("/", async (req, res) => {
 });
 
 // Admin create (protected) - POST /api/users
-router.post("/", protect, restrictTo("admin"), adminCreateUser);
+router.post("/", protect, restrictTo("admin", "receptionist"), adminCreateUser);
 
 // Public registration remains at /api/users/register
 router.post("/register", registerUser);
@@ -38,6 +39,9 @@ router.post("/reset/:token", resetPassword);
 // Admin update and delete user routes
 router.put("/:id", protect, restrictTo("admin"), updateUser);
 router.delete("/:id", protect, restrictTo("admin"), deleteUser);
+
+// Get current user info (for role-based UI)
+router.get("/me", protect, getCurrentUser);
 
 // Get unverified users (for bypass page)
 router.get("/unverified", getUnverifiedUsers);

@@ -4,21 +4,21 @@ const Checkin = require("../models/Checkin");
 const { checkinUser, deleteCheckin } = require("../controllers/checkinController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
-// Public endpoint - create checkin
-router.post("/", checkinUser);
+// Protected endpoint - create checkin
+router.post("/", protect, restrictTo("admin", "receptionist", "client"), checkinUser);
 
-// Public endpoint - list checkins (dev-friendly)
-router.get("/", async (req, res) => {
+// Protected endpoint - list checkins
+router.get("/", protect, restrictTo("admin", "receptionist"), async (req, res) => {
   try {
     const checkins = await Checkin.find().sort({ checkinTime: -1 }).populate("user", "firstName lastName email");
     res.json(checkins);
   } catch (err) {
-    console.error("Get checkins (public) error:", err);
+    console.error("Get checkins error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
 // Protected delete
-router.delete("/:id", protect, restrictTo("admin"), deleteCheckin);
+router.delete("/:id", protect, restrictTo("admin", "receptionist"), deleteCheckin);
 
 module.exports = router;
