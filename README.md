@@ -115,6 +115,9 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 ## TO DO
 
 - Front-End Streamlining
-   - Dashboad Analytics need to be polished
-   - Membership Page is incomplete
-   - General UI and UX polish needed
+   - Dashboad and role-based default pages needs to be polished
+   - Users page needs format fixing
+   - to remove: analytics tab sa header ng admin
+   - self-check in page ui polishes
+   - I left the seeder code, we should probably remove that one?
+   - let me know if I missed a functionality or there is a process decision we can optimise
