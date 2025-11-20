@@ -27,6 +27,19 @@ exports.checkinUser = async (req, res) => {
       }
     }
 
+    // Check if already checked in
+    let existingCheckin = null;
+    if (user) {
+      existingCheckin = await Checkin.findOne({ user: user._id, checkoutTime: null });
+    } else if (email) {
+      existingCheckin = await Checkin.findOne({ email, checkoutTime: null });
+    } else if (name) {
+      existingCheckin = await Checkin.findOne({ name, checkoutTime: null });
+    }
+    if (existingCheckin) {
+      return res.status(400).json({ error: "Already checked in" });
+    }
+
     // Determine membership status
     let isMember = false;
     if (user) {

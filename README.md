@@ -119,4 +119,3 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
    - Users page needs format fixing
    - self-check in page ui polishes
    - I left the seeder code, we should probably remove that one?
-   - let me know if I missed a functionality or there is a process decision we can optimise
