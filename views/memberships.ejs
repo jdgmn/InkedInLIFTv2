@@ -15,31 +15,62 @@
     <div class="card-body">
       <h5 class="card-title">Create membership</h5>
       <form id="createMembershipForm" class="row g-2">
-        <div class="col-md-4">
+        <div class="col-md-6">
           <input id="memEmail" class="form-control" placeholder="User email" list="emailList" required />
           <datalist id="emailList"></datalist>
         </div>
-        <div class="col-md-3">
-          <select id="memType" class="form-select">
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="annual">Annual</option>
+        <div class="col-md-4">
+          <select id="memPlan" class="form-select" required>
+            <option value="">Select a membership plan...</option>
+            <!-- Plans will be loaded dynamically -->
           </select>
         </div>
-        <div class="col-md-2"><input id="memPrice" type="number" step="0.01" class="form-control" placeholder="Price (₱)" required /></div>
-        <div class="col-md-2">
+        <div class="col-md-1">
           <select id="memPayment" class="form-select"><option value="paid">Paid</option><option value="pending">Pending</option><option value="failed">Failed</option></select>
         </div>
         <div class="col-md-1"><button class="btn btn-primary w-100">Add</button></div>
       </form>
+      <div id="planDetails" class="mt-2 small text-muted"></div>
       <div id="createMsg" class="mt-2"></div>
     </div>
   </div>
 
   <table class="table table-striped" id="membersTable">
     <thead><tr><th>Member</th><th>Plan</th><th>Price (₱)</th><th>Payment</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody></tbody>
+    <tbody>
+      <% memberships.forEach(membership => { %>
+        <tr data-id="<%= membership._id %>">
+          <td><%= membership.user ? (membership.user.firstName || '') + ' ' + (membership.user.lastName || '') : membership.email || 'Unknown' %></td>
+          <td><%= membership.membershipType %></td>
+          <td>₱<%= membership.price %></td>
+          <td><%= membership.paymentStatus %></td>
+          <td><%= membership.endDate ? new Date(membership.endDate).toLocaleDateString() : '' %></td>
+          <td><%= membership.status %></td>
+          <td><button class="btn btn-sm btn-primary editBtn">Edit</button> <button class="btn btn-sm btn-danger delBtn">Delete</button></td>
+        </tr>
+      <% }); %>
+    </tbody>
   </table>
+
+  <nav aria-label="Memberships pagination">
+    <ul class="pagination" id="paginationControls">
+      <% if (pagination.hasPrev) { %>
+        <li class="page-item">
+          <a class="page-link" href="?page=<%= pagination.currentPage - 1 %>">Previous</a>
+        </li>
+      <% } %>
+      <% for (let i = Math.max(1, pagination.currentPage - 2); i <= Math.min(pagination.totalPages, pagination.currentPage + 2); i++) { %>
+        <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+          <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+        </li>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+        <li class="page-item">
+          <a class="page-link" href="?page=<%= pagination.currentPage + 1 %>">Next</a>
+        </li>
+      <% } %>
+    </ul>
+  </nav>
 
   <script>
   (async function(){
@@ -47,6 +78,11 @@
     const token = getToken();
     const headersAuth = token ? { Authorization: "Bearer " + token } : {};
     const tbody = document.querySelector("#membersTable tbody");
+
+    // Get current page from URL or default to 1
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentPage = parseInt(urlParams.get('page')) || <%= pagination.currentPage %>;
+    const limit = 10; // matches viewRoutes.js
 
     // Populate email suggestions
     async function populateEmailList() {
@@ -62,21 +98,63 @@
         console.error("Failed to load email suggestions:", err);
       }
     }
+
+    // Load membership plans
+    async function loadPlans() {
+      try {
+        const res = await fetch("/api/membership-plans/plans");
+        if (res.ok) {
+          const plans = await res.json();
+          const planSelect = document.getElementById("memPlan");
+          planSelect.innerHTML = '<option value="">Select a membership plan...</option>' +
+            plans.map(plan => `<option value="${plan._id}" data-price="${plan.price}" data-duration="${plan.duration}">${plan.name} - ₱${plan.price} (${plan.duration} days)</option>`).join("");
+        }
+      } catch (err) {
+        console.error("Failed to load membership plans:", err);
+      }
+    }
+
     populateEmailList();
+    loadPlans();
+
+    // Handle plan selection to show details
+    document.getElementById("memPlan").addEventListener("change", (e) => {
+      const selectedOption = e.target.selectedOptions[0];
+      if (selectedOption && selectedOption.value) {
+        const price = selectedOption.getAttribute("data-price");
+        const duration = selectedOption.getAttribute("data-duration");
+        document.getElementById("planDetails").innerText = `₱${price} for ${duration} days`;
+      } else {
+        document.getElementById("planDetails").innerText = "";
+      }
+    });
 
     document.getElementById("createMembershipForm").addEventListener("submit", async (e)=>{
       e.preventDefault();
-      const payload = { email: document.getElementById("memEmail").value.trim(), membershipType: document.getElementById("memType").value, price: parseFloat(document.getElementById("memPrice").value), paymentStatus: document.getElementById("memPayment").value };
+      const planId = document.getElementById("memPlan").value;
+      if (!planId) {
+        alert("Please select a membership plan");
+        return;
+      }
+      const payload = {
+        email: document.getElementById("memEmail").value.trim(),
+        planId: planId,
+        paymentStatus: document.getElementById("memPayment").value
+      };
       const res = await fetch("/api/memberships", { method: "POST", headers: { "Content-Type":"application/json", ...headersAuth }, body: JSON.stringify(payload) });
       const data = await res.json();
       const msg = document.getElementById("createMsg");
       if (!res.ok) { msg.innerText = data.error || data.message || "Failed"; msg.className = "text-danger"; return; }
-      msg.innerText = "Created"; msg.className = "text-success"; setTimeout(()=> load(), 600);
+      msg.innerText = "Created"; msg.className = "text-success";
+      document.getElementById("createMembershipForm").reset();
+      document.getElementById("planDetails").innerText = "";
+      setTimeout(()=> load(), 600);
     });
 
-    async function load(){
+    async function load(page = currentPage){
       tbody.innerHTML = "<tr><td colspan='7'>Loading…</td></tr>";
-      const res = await fetch("/api/memberships", { headers: headersAuth });
+      const url = `/api/memberships?page=${page}&limit=${limit}`;
+      const res = await fetch(url, { headers: headersAuth });
       if (!res.ok) { tbody.innerHTML = "<tr><td colspan='7'>Failed to load</td></tr>"; return; }
       const items = await res.json();
       tbody.innerHTML = items.map(m => `<tr data-id="${m._id}"><td>${(m.user ? (m.user.firstName||'') + ' ' + (m.user.lastName||'') : (m.email||'Unknown')).trim()}</td><td>${m.membershipType}</td><td>₱${m.price}</td><td>${m.paymentStatus}</td><td>${m.endDate ? new Date(m.endDate).toLocaleDateString() : ''}</td><td>${m.status}</td><td><button class="btn btn-sm btn-danger delBtn">Delete</button> <button class="btn btn-sm btn-primary editBtn">Edit</button></td></tr>`).join("");

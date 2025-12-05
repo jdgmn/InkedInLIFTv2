@@ -1,0 +1,139 @@
+<%- include('partials/header', { title: 'My Profile' }) %>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h4>Edit Profile</h4>
+        </div>
+        <div class="card-body">
+          <form id="profileForm">
+            <div class="row">
+              <div class="col mb-3">
+                <label for="firstName" class="form-label">First Name</label>
+                <input class="form-control" id="firstName" placeholder="First name" required />
+              </div>
+              <div class="col mb-3">
+                <label for="lastName" class="form-label">Last Name</label>
+                <input class="form-control" id="lastName" placeholder="Last name" required />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input class="form-control" id="email" type="email" placeholder="Email" required />
+              <div id="emailValidation"></div>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">New Password (leave blank to keep current)</label>
+              <input class="form-control" id="password" type="password" placeholder="Password" />
+              <div id="passwordStrength"></div>
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Update Profile</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  function getToken(){ try{ const t=localStorage.getItem("token"); if(t) return t; }catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
+  const token = getToken();
+  const headersAuth = token ? { Authorization: "Bearer " + token } : {};
+
+  // Password strength validation
+  function validatePassword(password) {
+    if (!password) return { valid: true }; // Optional for profile update
+    const minLength = password.length >= 8;
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    return {
+      valid: minLength && hasLower && hasUpper && hasNumber,
+      minLength,
+      hasLower,
+      hasUpper,
+      hasNumber
+    };
+  }
+
+  // Email validation
+  function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // Load current user data
+  async function loadProfile() {
+    try {
+      const response = await fetch('/api/users/me', { headers: headersAuth });
+      if (response.ok) {
+        const user = await response.json();
+        document.getElementById('firstName').value = user.firstName || '';
+        document.getElementById('lastName').value = user.lastName || '';
+        document.getElementById('email').value = user.email || '';
+      } else {
+        alert('Failed to load profile');
+      }
+    } catch (error) {
+      console.error('Load profile error:', error);
+      alert('Error loading profile');
+    }
+  }
+
+  loadProfile();
+
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    // Client-side validation
+    if (!firstName || !lastName || !email) {
+      alert("First name, last name, and email are required");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      alert("Password must be at least 8 characters and contain uppercase, lowercase, and number");
+      return;
+    }
+
+    const payload = { firstName, lastName, email };
+    if (password) payload.password = password;
+
+    try {
+      const response = await fetch("/api/users/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Update failed");
+        return;
+      }
+
+      alert(data.message || "Profile updated successfully");
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred");
+    }
+  });
+})();
+</script>
+
+<%- include('partials/footer') %>

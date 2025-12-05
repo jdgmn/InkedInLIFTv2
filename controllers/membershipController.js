@@ -1,3 +1,10 @@
+// In-memory rates (Could be moved to DB later)
+let membershipRates = {
+  monthly: 30,
+  quarterly: 80,
+  annual: 300,
+};
+
 const Membership = require("../models/Membership");
 const User = require("../models/User");
 
@@ -7,15 +14,20 @@ const validateEmail = (email) => {
   return emailRegex.test(email);
 };
 
+// Helper: get automatic price based on type
+const getMembershipPrice = (type) => {
+  return membershipRates[type] || 0;
+};
+
 // Create or renew membership
 exports.createMembership = async (req, res) => {
   try {
-    const { email, membershipType, price, paymentStatus, startDate } = req.body;
-    
-    if (!email || !membershipType || price == null) {
+    const { email, planId, paymentStatus, startDate } = req.body;
+
+    if (!email || !planId) {
       return res
         .status(400)
-        .json({ error: "email, membershipType and price are required" });
+        .json({ error: "email and planId are required" });
     }
 
     // Validate email format
@@ -23,50 +35,79 @@ exports.createMembership = async (req, res) => {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // Validate membership type
-    const validTypes = ["monthly", "quarterly", "annual"];
-    if (!validTypes.includes(membershipType)) {
-      return res.status(400).json({ error: "Invalid membership type. Must be monthly, quarterly, or annual" });
+    // Get the membership plan
+    const MembershipPlan = require("../models/MembershipPlan");
+    const plan = await MembershipPlan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ error: "Membership plan not found" });
     }
 
-    // Validate price
-    if (price < 0) {
-      return res.status(400).json({ error: "Price cannot be negative" });
+    if (!plan.isActive) {
+      return res.status(400).json({ error: "Membership plan is not active" });
     }
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Expire existing active membership for this user
-    await Membership.updateMany(
-      { user: user._id, status: "active" },
-      { $set: { status: "expired" } }
-    );
+    // Check for existing active membership
+    const existingMembership = await Membership.findOne({
+      user: user._id,
+      status: "active",
+      endDate: { $gte: new Date() }
+    });
+
+    if (existingMembership) {
+      return res.status(400).json({
+        error: "User already has an active membership",
+        currentMembership: {
+          plan: existingMembership.membershipType,
+          endDate: existingMembership.endDate
+        }
+      });
+    }
+
+    // Calculate end date based on plan duration
+    const start = startDate ? new Date(startDate) : new Date();
+    const endDate = new Date(start);
+    endDate.setDate(endDate.getDate() + plan.duration);
 
     const membership = new Membership({
       user: user._id,
-      membershipType,
-      price,
-      startDate: startDate || new Date(),
+      membershipType: plan.name, // Store plan name for display
+      price: plan.price,
+      startDate: start,
+      endDate,
       paymentStatus: paymentStatus || "paid",
       status: "active",
       createdBy: req.user ? req.user._id : null,
+      planId: plan._id // Reference to the plan
     });
 
     await membership.save();
-    
+
     const populatedMembership = await Membership.findById(membership._id).populate("user", "email firstName lastName");
-    res.status(201).json({ message: "Membership created", membership: populatedMembership });
+    res.status(201).json({
+      message: `Membership created successfully for ${plan.name}`,
+      membership: populatedMembership,
+      plan: {
+        name: plan.name,
+        duration: plan.duration,
+        price: plan.price
+      }
+    });
   } catch (error) {
     console.error("Create membership error:", error);
     if (error.name === "ValidationError") {
       return res.status(400).json({ error: error.message });
     }
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid plan ID" });
+    }
     res.status(500).json({ error: "Server error" });
   }
 };
 
-// Get all memberships
+// Get all memberships with optional pagination
 exports.getMemberships = async (req, res) => {
   try {
     // Auto-expire memberships that have passed their end date
@@ -75,10 +116,15 @@ exports.getMemberships = async (req, res) => {
       { $set: { status: "expired" } }
     );
 
-    const memberships = await Membership.find().populate(
-      "user",
-      "email firstName lastName"
-    );
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const memberships = await Membership.find()
+      .populate("user", "email firstName lastName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     res.json(memberships);
   } catch (error) {
     console.error("Get memberships error:", error);
@@ -162,6 +208,32 @@ exports.deleteMembership = async (req, res) => {
     res.json({ message: "Membership deleted" });
   } catch (error) {
     console.error("Delete membership error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Get membership rates (admin only)
+exports.getMembershipRates = async (req, res) => {
+  try {
+    res.json({ rates: membershipRates });
+  } catch (error) {
+    console.error("Get rates error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Update membership rates (admin only)
+exports.updateMembershipRates = async (req, res) => {
+  try {
+    const { rates } = req.body;
+    if (!rates || typeof rates !== 'object') {
+      return res.status(400).json({ error: "Rates object is required" });
+    }
+    // Update rates
+    Object.assign(membershipRates, rates);
+    res.json({ message: "Rates updated", rates: membershipRates });
+  } catch (error) {
+    console.error("Update rates error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };

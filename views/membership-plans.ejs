@@ -1,0 +1,282 @@
+<%- include('partials/header', { title: 'Membership Plans' }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Membership Plans</h1>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPlanModal">Add New Plan</button>
+</div>
+
+<table class="table table-striped" id="plansTable">
+  <thead><tr><th>Name</th><th>Description</th><th>Price</th><th>Duration (days)</th><th>Users Allowed</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>
+    <% plans.forEach(plan => { %>
+      <tr data-id="<%= plan._id %>">
+        <td><%= plan.name %></td>
+        <td><%= plan.description || '' %></td>
+        <td>₱<%= plan.price %></td>
+        <td><%= plan.duration %></td>
+        <td><%= plan.allowedUsers %></td>
+        <td><span class="badge bg-<%= plan.isActive ? 'success' : 'secondary' %>"><%= plan.isActive ? 'Active' : 'Inactive' %></span></td>
+        <td>
+          <button class="btn btn-sm btn-primary editBtn me-1">Edit</button>
+          <button class="btn btn-sm btn-danger deleteBtn">Delete</button>
+        </td>
+      </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+<!-- Create Plan Modal -->
+<div class="modal fade" id="createPlanModal" tabindex="-1" aria-labelledby="createPlanModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createPlanModalLabel">Create Membership Plan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createPlanForm">
+          <div class="mb-3">
+            <label for="planName" class="form-label">Plan Name *</label>
+            <input type="text" class="form-control" id="planName" required>
+          </div>
+          <div class="mb-3">
+            <label for="planDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="planDescription" rows="3"></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="planPrice" class="form-label">Price (₱) *</label>
+                <input type="number" class="form-control" id="planPrice" step="0.01" min="0" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="planDuration" class="form-label">Duration (days) *</label>
+                <input type="number" class="form-control" id="planDuration" min="1" required>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="planUsers" class="form-label">Users Allowed</label>
+                <input type="number" class="form-control" id="planUsers" min="1" value="1">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="planSort" class="form-label">Sort Order</label>
+                <input type="number" class="form-control" id="planSort" value="0">
+              </div>
+            </div>
+          </div>
+          <div id="createPlanMsg"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="createPlanBtn">Create Plan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Plan Modal -->
+<div class="modal fade" id="editPlanModal" tabindex="-1" aria-labelledby="editPlanModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editPlanModalLabel">Edit Membership Plan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editPlanForm">
+          <div class="mb-3">
+            <label for="editPlanName" class="form-label">Plan Name *</label>
+            <input type="text" class="form-control" id="editPlanName" required>
+          </div>
+          <div class="mb-3">
+            <label for="editPlanDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="editPlanDescription" rows="3"></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editPlanPrice" class="form-label">Price (₱) *</label>
+                <input type="number" class="form-control" id="editPlanPrice" step="0.01" min="0" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editPlanDuration" class="form-label">Duration (days) *</label>
+                <input type="number" class="form-control" id="editPlanDuration" min="1" required>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editPlanUsers" class="form-label">Users Allowed</label>
+                <input type="number" class="form-control" id="editPlanUsers" min="1">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editPlanSort" class="form-label">Sort Order</label>
+                <input type="number" class="form-control" id="editPlanSort">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="editPlanActive">
+              <label class="form-check-label" for="editPlanActive">Active</label>
+            </div>
+          </div>
+          <div id="editPlanMsg"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="updatePlanBtn">Update Plan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  function getToken(){ try { const t = localStorage.getItem("token"); if (t) return t; } catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
+  const token = getToken();
+  const headersAuth = token ? { Authorization: "Bearer " + token } : {};
+  const tbody = document.querySelector("#plansTable tbody");
+
+  async function loadPlans() {
+    tbody.innerHTML = "<tr><td colspan='7'>Loading…</td></tr>";
+    const res = await fetch("/api/membership-plans", { headers: headersAuth });
+    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='7'>Failed to load (${res.status})</td></tr>`; return; }
+    const plans = await res.json();
+    tbody.innerHTML = plans.map(plan => `
+      <tr data-id="${plan._id}">
+        <td>${plan.name}</td>
+        <td>${plan.description || ''}</td>
+        <td>₱${plan.price}</td>
+        <td>${plan.duration}</td>
+        <td>${plan.allowedUsers}</td>
+        <td><span class="badge bg-${plan.isActive ? 'success' : 'secondary'}">${plan.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="btn btn-sm btn-primary editBtn me-1">Edit</button>
+          <button class="btn btn-sm btn-danger deleteBtn">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    attachHandlers();
+  }
+
+  // Create Plan
+  document.getElementById("createPlanBtn").addEventListener("click", async () => {
+    const name = document.getElementById("planName").value.trim();
+    const description = document.getElementById("planDescription").value.trim();
+    const price = parseFloat(document.getElementById("planPrice").value);
+    const duration = parseInt(document.getElementById("planDuration").value);
+    const allowedUsers = parseInt(document.getElementById("planUsers").value);
+    const sortOrder = parseInt(document.getElementById("planSort").value);
+
+    if (!name || !price || !duration) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const res = await fetch("/api/membership-plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headersAuth },
+      body: JSON.stringify({ name, description, price, duration, allowedUsers, sortOrder })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      bootstrap.Modal.getInstance(document.getElementById("createPlanModal")).hide();
+      document.getElementById("createPlanForm").reset();
+      loadPlans();
+    } else {
+      alert(data.error || "Failed to create plan");
+    }
+  });
+
+  function attachHandlers() {
+    // Edit buttons
+    document.querySelectorAll(".editBtn").forEach(btn => btn.onclick = async (e) => {
+      const tr = e.target.closest("tr");
+      const id = tr.dataset.id;
+
+      // Populate edit modal with current values
+      document.getElementById("editPlanName").value = tr.children[0].textContent;
+      document.getElementById("editPlanDescription").value = tr.children[1].textContent;
+      document.getElementById("editPlanPrice").value = tr.children[2].textContent.replace('₱', '');
+      document.getElementById("editPlanDuration").value = tr.children[3].textContent;
+      document.getElementById("editPlanUsers").value = tr.children[4].textContent;
+      document.getElementById("editPlanActive").checked = tr.children[5].innerText.includes('Active');
+
+      // Get sort order from API
+      const res = await fetch(`/api/membership-plans/${id}`, { headers: headersAuth });
+      if (res.ok) {
+        const plan = await res.json();
+        document.getElementById("editPlanSort").value = plan.sortOrder || 0;
+      }
+
+      // Handle update
+      const updateBtn = document.getElementById("updatePlanBtn");
+      const handleUpdate = async () => {
+        const name = document.getElementById("editPlanName").value.trim();
+        const description = document.getElementById("editPlanDescription").value.trim();
+        const price = parseFloat(document.getElementById("editPlanPrice").value);
+        const duration = parseInt(document.getElementById("editPlanDuration").value);
+        const allowedUsers = parseInt(document.getElementById("editPlanUsers").value);
+        const sortOrder = parseInt(document.getElementById("editPlanSort").value);
+        const isActive = document.getElementById("editPlanActive").checked;
+
+        if (!name || !price || !duration) {
+          alert("Please fill in all required fields");
+          return;
+        }
+
+        const res = await fetch(`/api/membership-plans/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...headersAuth },
+          body: JSON.stringify({ name, description, price, duration, allowedUsers, sortOrder, isActive })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          bootstrap.Modal.getInstance(document.getElementById("editPlanModal")).hide();
+          loadPlans();
+        } else {
+          alert(data.error || "Failed to update plan");
+        }
+      };
+
+      updateBtn.onclick = handleUpdate;
+      bootstrap.Modal.getOrCreateInstance(document.getElementById("editPlanModal")).show();
+    });
+
+    // Delete buttons
+    document.querySelectorAll(".deleteBtn").forEach(b => b.onclick = async (e) => {
+      const id = e.target.closest("tr").dataset.id;
+      if (!confirm("Delete this membership plan? This action cannot be undone.")) return;
+      const res = await fetch(`/api/membership-plans/${id}`, { method: "DELETE", headers: headersAuth });
+      if (res.ok) {
+        alert("Plan deleted successfully");
+        loadPlans();
+      } else {
+        const data = await res.json();
+        alert(`Delete failed: ${data.error || "Unknown error"}`);
+      }
+    });
+  }
+
+  loadPlans();
+})();
+</script>
+
+<%- include('partials/footer') %>

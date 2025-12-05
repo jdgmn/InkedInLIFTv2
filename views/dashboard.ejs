@@ -12,6 +12,57 @@
 
   <h1 class="mt-3">Dashboard</h1>
 
+  <!-- Reports Section -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Generate Reports</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Users Report</h6>
+                  <p class="card-text text-muted small">Export all user data</p>
+                  <button class="btn btn-outline-primary btn-sm" onclick="downloadReport('users')">Download CSV</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Memberships Report</h6>
+                  <p class="card-text text-muted small">Export membership data</p>
+                  <button class="btn btn-outline-primary btn-sm" onclick="downloadReport('memberships')">Download CSV</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Check-ins Report</h6>
+                  <p class="card-text text-muted small">Export check-in data</p>
+                  <button class="btn btn-outline-primary btn-sm" onclick="downloadReport('checkins')">Download CSV</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card h-100">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Analytics Report</h6>
+                  <p class="card-text text-muted small">Export dashboard metrics</p>
+                  <button class="btn btn-outline-primary btn-sm" onclick="downloadReport('analytics')">Download CSV</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <div class="card"><div class="card-body">
@@ -424,6 +475,126 @@
       document.getElementById("totalCheckinsMonth").innerText = avgSessions.totalCheckins ?? 0;
       document.getElementById("uniqueUsersMonth").innerText = avgSessions.uniqueUsers ?? 0;
       document.getElementById("avgSessionsPerUser").innerText = avgSessions.avgSessionsPerUser ? Math.round(avgSessions.avgSessionsPerUser * 10) / 10 : 0;
+    }
+
+    // Report generation functions
+    window.downloadReport = async function(type) {
+      try {
+        let data, filename, csvContent;
+
+        switch(type) {
+          case 'users':
+            data = await fetchAll('/api/users');
+            filename = 'users_report.csv';
+            csvContent = convertToCSV(data, ['firstName', 'lastName', 'email', 'role', 'verified', 'createdAt']);
+            break;
+
+          case 'memberships':
+            data = await fetchAll('/api/memberships');
+            filename = 'memberships_report.csv';
+            csvContent = convertToCSV(data, ['user', 'email', 'membershipType', 'price', 'paymentStatus', 'status', 'endDate', 'createdAt'], [
+              (item) => item.user ? `${item.user.firstName || ''} ${item.user.lastName || ''}`.trim() : item.email || '',
+              (item) => (item.user ? item.user.email : null),
+            ]);
+            break;
+
+          case 'checkins':
+            data = await fetchAll('/api/checkins');
+            filename = 'checkins_report.csv';
+            csvContent = convertToCSV(data, ['user', 'name', 'email', 'isMember', 'checkinTime', 'checkoutTime'], [
+              (item) => item.user ? `${item.user.firstName || ''} ${item.user.lastName || ''}`.trim() : '',
+            ]);
+            break;
+
+          case 'analytics':
+            // Compile all dashboard metrics
+            data = [{
+              totalUsers: document.getElementById('totalUsers').innerText,
+              totalMembers: document.getElementById('totalMembers').innerText,
+              totalCheckins: document.getElementById('totalCheckins').innerText,
+              mrr: document.getElementById('mrr').innerText,
+              revenue30d: document.getElementById('rev30').innerText,
+              newMembers30d: document.getElementById('newMembers30').innerText,
+              churnRate: document.getElementById('churnRate').innerText,
+              generatedAt: new Date().toISOString()
+            }];
+            filename = 'analytics_summary.csv';
+            csvContent = convertToCSV(data, Object.keys(data[0]));
+            break;
+
+          default:
+            alert('Unknown report type');
+            return;
+        }
+
+        downloadCSV(csvContent, filename);
+        console.log(`${type} report downloaded as ${filename}`);
+      } catch (error) {
+        console.error('Report generation failed:', error);
+        alert('Failed to generate report. Please try again.');
+      }
+    }
+
+    async function fetchAll(url) {
+      let allData = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await fetch(`${url}?page=${page}&limit=1000`, { headers });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const result = await response.json();
+
+        if (url.includes('/api/checkins')) {
+          allData = allData.concat(result.checkins || []);
+          hasMore = page < (result.pagination?.totalPages || 1);
+        } else {
+          allData = allData.concat(Array.isArray(result) ? result : []);
+          // For simple pagination-free endpoints, get all in one request
+          hasMore = false;
+        }
+
+        page++;
+      }
+
+      return allData;
+    }
+
+    function convertToCSV(data, columns, customFormatters = []) {
+      if (!data || !data.length) return '';
+
+      const headers = columns.join(',');
+      const rows = data.map(item => {
+        return columns.map((col, index) => {
+          if (customFormatters[index]) {
+            return `"${customFormatters[index](item) || ''}"`;
+          }
+          let value = item[col];
+          if (value instanceof Date) {
+            value = value.toLocaleString();
+          } else if (typeof value === 'object' && value !== null) {
+            // Handle nested objects like user data
+            value = '';
+          }
+          return `"${value || ''}"`;
+        }).join(',');
+      });
+
+      return [headers, ...rows].join('\n');
+    }
+
+    function downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
   })();

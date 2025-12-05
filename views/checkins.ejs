@@ -12,11 +12,26 @@
   <div class="col-md-2"><button class="btn btn-success">Check in</button></div>
 </form>
 
-<div class="form-check mb-3">
-  <input class="form-check-input" type="checkbox" id="hideCheckedOut" checked>
-  <label class="form-check-label" for="hideCheckedOut">
-    Hide checked-out users
-  </label>
+<div class="row mb-3">
+  <div class="col-md-3">
+    <label for="startDate" class="form-label">Start Date</label>
+    <input type="date" class="form-control" id="startDate">
+  </div>
+  <div class="col-md-3">
+    <label for="endDate" class="form-label">End Date</label>
+    <input type="date" class="form-control" id="endDate">
+  </div>
+  <div class="col-md-3">
+    <label for="activeFilter" class="form-label">Filter</label>
+    <select class="form-select" id="activeFilter">
+      <option value="">All</option>
+      <option value="true">Active only</option>
+      <option value="false">Historical only</option>
+    </select>
+  </div>
+  <div class="col-md-3 d-flex align-items-end">
+    <button class="btn btn-primary" id="filterBtn">Apply Filters</button>
+  </div>
 </div>
 
 <table class="table table-striped" id="checkinsTable">
@@ -24,12 +39,19 @@
   <tbody></tbody>
 </table>
 
+<nav aria-label="Checkins pagination">
+  <ul class="pagination" id="paginationControls"></ul>
+</nav>
+
 <script>
 (async () => {
   function getToken(){ try{ const t=localStorage.getItem("token"); if(t) return t; }catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
   const token = getToken();
   const headersAuth = token ? { Authorization: "Bearer " + token } : {};
   const tbody = document.querySelector("#checkinsTable tbody");
+  const paginationControls = document.getElementById("paginationControls");
+  let currentPage = 1;
+  const limit = 10;
 
   // Email validation
   function validateEmail(email) {
@@ -79,7 +101,7 @@
 
     const data = await res.json();
     alert(data.message || "Check-in done");
-    load();
+    load(currentPage);
   });
 
   // Populate email suggestions
@@ -101,24 +123,88 @@
   // Add event listener for real-time email validation
   document.getElementById("ciEmail").addEventListener("input", updateEmailValidation);
 
-  // Add event listener for hide checked-out filter
-  document.getElementById("hideCheckedOut").addEventListener("change", load);
+  // Filter button
+  document.getElementById("filterBtn").addEventListener("click", () => {
+    currentPage = 1;
+    load(currentPage);
+  });
 
-  async function load(){
+  async function load(page = 1){
     tbody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
-    const res = await fetch("/api/checkins", { headers: headersAuth });
+    currentPage = page;
+
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
+    const active = document.getElementById("activeFilter").value;
+
+    const params = new URLSearchParams({ page, limit });
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (active) params.append('active', active);
+
+    const res = await fetch(`/api/checkins?${params}`, { headers: headersAuth });
     if (!res.ok) { tbody.innerHTML = `<tr><td colspan='6'>Failed to load (${res.status})</td></tr>`; return; }
-    let items = await res.json();
-    const hideCheckedOut = document.getElementById("hideCheckedOut").checked;
-    if (hideCheckedOut) {
-      items = items.filter(ci => !ci.checkoutTime);
+    const data = await res.json();
+    const items = data.checkins;
+    const pagination = data.pagination;
+
+    tbody.innerHTML = items.map(ci => `<tr data-id="${ci._id}"><td>${new Date(ci.checkinTime).toLocaleString()}</td><td>${ci.checkoutTime ? new Date(ci.checkoutTime).toLocaleString() : ''}</td><td>${ci.name||''}</td><td>${ci.email||''}</td><td>${ci.isMember ? 'Yes' : 'No'}</td><td>${ci.checkoutTime ? '' : '<button class="btn btn-sm btn-warning checkoutBtn me-2">Checkout</button>'}<button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
+
+    // Pagination controls
+    paginationControls.innerHTML = '';
+    if (pagination.totalPages > 1) {
+      // Previous button
+      const prevLi = document.createElement('li');
+      prevLi.className = `page-item ${!pagination.hasPrev ? 'disabled' : ''}`;
+      prevLi.innerHTML = `<a class="page-link" href="#" data-page="${pagination.currentPage - 1}">Previous</a>`;
+      paginationControls.appendChild(prevLi);
+
+      // Page numbers
+      for (let p = Math.max(1, pagination.currentPage - 2); p <= Math.min(pagination.totalPages, pagination.currentPage + 2); p++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${p === pagination.currentPage ? 'active' : ''}`;
+        pageLi.innerHTML = `<a class="page-link" href="#" data-page="${p}">${p}</a>`;
+        paginationControls.appendChild(pageLi);
+      }
+
+      // Next button
+      const nextLi = document.createElement('li');
+      nextLi.className = `page-item ${!pagination.hasNext ? 'disabled' : ''}`;
+      nextLi.innerHTML = `<a class="page-link" href="#" data-page="${pagination.currentPage + 1}">Next</a>`;
+      paginationControls.appendChild(nextLi);
     }
-    tbody.innerHTML = items.map(ci => `<tr data-id="${ci._id}"><td>${new Date(ci.checkinTime).toLocaleString()}</td><td>${ci.checkoutTime ? new Date(ci.checkoutTime).toLocaleString() : ''}</td><td>${ci.name||''}</td><td>${ci.email||''}</td><td>${ci.isMember ? 'Yes' : 'No'}</td><td>${ci.checkoutTime ? '' : '<button class="btn btn-sm btn-warning checkoutBtn">Checkout</button>'} <button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
-    document.querySelectorAll(".checkoutBtn").forEach(b=>b.onclick=async (e)=>{ const id=e.target.closest("tr").dataset.id; if(!confirm("Checkout this user?")) return; const res=await fetch("/api/checkins/" + id + "/checkout", { method: "PUT", headers: headersAuth }); if (res.ok) load(); else alert("Checkout failed"); });
-    document.querySelectorAll(".delBtn").forEach(b=>b.onclick=async (e)=>{ const id=e.target.closest("tr").dataset.id; if(!confirm("Delete checkin?")) return; const res=await fetch("/api/checkins/" + id, { method: "DELETE", headers: headersAuth }); if (res.ok) load(); else alert("Delete failed"); });
+
+    // Attach click handlers for pagination
+    document.querySelectorAll("#paginationControls .page-link").forEach(link => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const page = parseInt(link.dataset.page);
+        if (page && page !== currentPage) {
+          load(page);
+        }
+      });
+    });
+
+    // Checkout buttons
+    document.querySelectorAll(".checkoutBtn").forEach(b=>b.onclick=async (e)=>{
+      e.preventDefault();
+      const id = e.target.closest("tr").dataset.id;
+      if(!confirm("Checkout this user?")) return;
+      const res=await fetch("/api/checkins/" + id + "/checkout", { method: "PUT", headers: headersAuth });
+      if (res.ok) load(page); else alert("Checkout failed");
+    });
+
+    // Delete buttons
+    document.querySelectorAll(".delBtn").forEach(b=>b.onclick=async (e)=>{
+      e.preventDefault();
+      const id = e.target.closest("tr").dataset.id;
+      if(!confirm("Delete this check-in record permanently? This action cannot be undone.")) return;
+      const res=await fetch("/api/checkins/" + id, { method: "DELETE", headers: headersAuth });
+      if (res.ok) { alert("Check-in record deleted successfully"); load(page); } else alert("Delete failed");
+    });
   }
 
-  load();
+  load(currentPage);
 })();
 </script>
 

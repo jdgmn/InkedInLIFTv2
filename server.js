@@ -29,12 +29,14 @@ const viewRoutes = require("./routes/viewRoutes");
 const userRoutes = require("./routes/userRoutes");
 const checkinRoutes = require("./routes/checkinRoutes");
 const membershipRoutes = require("./routes/membershipRoutes");
+const membershipPlanRoutes = require("./routes/membershipPlanRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 
 app.use("/", viewRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/checkins", checkinRoutes);
 app.use("/api/memberships", membershipRoutes);
+app.use("/api/membership-plans", membershipPlanRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 // Basic root render

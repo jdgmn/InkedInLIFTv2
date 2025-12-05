@@ -6,7 +6,13 @@ const {
   getMemberships,
   updateMembership,
   deleteMembership,
+  getMembershipRates,
+  updateMembershipRates,
 } = require("../controllers/membershipController");
+
+// Membership rates (admin only)
+router.get("/rates", protect, restrictTo("admin"), getMembershipRates);
+router.put("/rates", protect, restrictTo("admin"), updateMembershipRates);
 
 // Protected endpoints
 router.post("/", protect, restrictTo("admin", "receptionist"), createMembership);

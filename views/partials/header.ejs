@@ -21,6 +21,7 @@
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
           <li class="nav-item" id="usersNav" style="display: none;"><a class="nav-link" href="/users">Users</a></li>
+          <li class="nav-item" id="membershipPlansNav" style="display: none;"><a class="nav-link" href="/membership-plans">Membership Plans</a></li>
           <li class="nav-item" id="membershipsNav" style="display: none;"><a class="nav-link" href="/memberships">Memberships</a></li>
           <li class="nav-item" id="checkinsNav" style="display: none;"><a class="nav-link" href="/checkins">Check-ins</a></li>
           <li class="nav-item" id="selfcheckinNav" style="display: none;"><a class="nav-link" href="/selfcheckin">Self Check-In</a></li>
@@ -49,6 +50,7 @@
           if (role === "admin") {
             // Admin sees everything except analytics (dashboard is analytics)
             document.getElementById("usersNav").style.display = "block";
+            document.getElementById("membershipPlansNav").style.display = "block";
             document.getElementById("membershipsNav").style.display = "block";
             document.getElementById("checkinsNav").style.display = "block";
             document.getElementById("selfcheckinNav").style.display = "block";
@@ -59,7 +61,7 @@
             document.getElementById("checkinsNav").style.display = "block";
             document.getElementById("selfcheckinNav").style.display = "block";
           } else if (role === "client") {
-            // Client only sees self checkin
+            // Client sees self check-in
             document.getElementById("selfcheckinNav").style.display = "block";
           }
         }

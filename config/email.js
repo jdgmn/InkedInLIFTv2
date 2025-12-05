@@ -1,26 +1,26 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (to, subject, html) => {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error("Email credentials not configured");
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY not configured");
     }
-    const info = await transporter.sendMail({
-      from: `"InkedInLIFT" <${process.env.EMAIL_USER}>`,
-      to,
+
+    if (!process.env.EMAIL_FROM) {
+      throw new Error("EMAIL_FROM not configured");
+    }
+
+    const data = await resend.emails.send({
+      from: process.env.EMAIL_FROM,
+      to: [to],
       subject,
       html,
     });
-    console.log("Email sent:", info.messageId);
-    return info;
+
+    console.log("Email sent:", data.data?.id);
+    return data;
   } catch (error) {
     console.error("sendEmail error:", error);
     throw error;

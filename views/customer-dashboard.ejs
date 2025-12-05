@@ -1,0 +1,224 @@
+<%- include('partials/header', { title: 'My Dashboard' }) %>
+
+<h1 class="mt-3">My Dashboard</h1>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card"><div class="card-body text-center">
+      <h6 class="text-muted">Welcome</h6>
+      <h4 id="customerName">–</h4>
+      <p class="text-muted mb-0" id="customerEmail">–</p>
+    </div></div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card"><div class="card-body text-center">
+      <h6 class="text-muted">Membership Status</h6>
+      <h4 id="membershipStatus">No Active Membership</h4>
+      <p class="text-muted mb-0" id="membershipEndDate">—</p>
+    </div></div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card"><div class="card-body text-center">
+      <h6 class="text-muted">Total Check-ins</h6>
+      <h3 id="totalCheckins">–</h3>
+    </div></div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Quick Actions</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <a href="/selfcheckin" class="btn btn-success w-100">Check In Now</a>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#editProfileModal">Edit Profile</button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-info w-100" onclick="window.location.href='/profile'">View Full Profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Recent Activity</h5>
+      </div>
+      <div class="card-body">
+        <div id="recentActivity">
+          <div class="text-muted small">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editProfileForm">
+          <div class="mb-3">
+            <label for="editFirstName" class="form-label">First Name *</label>
+            <input type="text" class="form-control" id="editFirstName" required>
+          </div>
+          <div class="mb-3">
+            <label for="editLastName" class="form-label">Last Name *</label>
+            <input type="text" class="form-control" id="editLastName" required>
+          </div>
+          <div class="mb-3">
+            <label for="editEmail" class="form-label">Email *</label>
+            <input type="email" class="form-control" id="editEmail" required>
+          </div>
+          <div class="mb-3" id="passwordSection" style="display: none;">
+            <label for="editPassword" class="form-label">New Password (leave blank to keep current)</label>
+            <input type="password" class="form-control" id="editPassword">
+            <small class="text-muted">Password must be at least 8 characters, contain uppercase, lowercase, and number</small>
+          </div>
+          <div id="editProfileMsg"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  function getToken(){ try { const t = localStorage.getItem("token"); if (t) return t; } catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
+  const token = getToken();
+  const headersAuth = token ? { Authorization: "Bearer " + token } : {};
+
+  // Load customer data
+  async function loadCustomerData() {
+    try {
+      const res = await fetch("/api/users/me", { headers: headersAuth });
+      if (res.ok) {
+        const user = await res.json();
+        document.getElementById("customerName").textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        document.getElementById("customerEmail").textContent = user.email;
+
+        // Populate edit form
+        document.getElementById("editFirstName").value = user.firstName || '';
+        document.getElementById("editLastName").value = user.lastName || '';
+        document.getElementById("editEmail").value = user.email;
+
+        // Load membership status
+        await loadMembershipStatus(user.id);
+
+        // Load check-ins count
+        await loadCheckinsCount(user.id);
+      }
+    } catch (error) {
+      console.error("Failed to load customer data:", error);
+    }
+  }
+
+  // Load membership status
+  async function loadMembershipStatus(userId) {
+    try {
+      const res = await fetch(`/api/memberships?active=true&page=1&limit=1`, { headers: headersAuth });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length > 0) {
+          const membership = data[0];
+          document.getElementById("membershipStatus").textContent = membership.membershipType;
+          document.getElementById("membershipEndDate").textContent = `Expires: ${new Date(membership.endDate).toLocaleDateString()}`;
+        } else {
+          document.getElementById("membershipStatus").textContent = "No Active Membership";
+          document.getElementById("membershipEndDate").textContent = "";
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load membership status:", error);
+    }
+  }
+
+  // Load total check-ins count
+  async function loadCheckinsCount(userId) {
+    try {
+      const res = await fetch("/api/checkins?page=1&limit=1", { headers: headersAuth });
+      if (res.ok) {
+        const data = await res.json();
+        // Note: This API may need pagination to get accurate count
+        // For now, showing approximate
+        document.getElementById("totalCheckins").textContent = "—"; // Placeholder
+      }
+    } catch (error) {
+      console.error("Failed to load check-ins count:", error);
+    }
+  }
+
+  // Handle profile update
+  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+    const firstName = document.getElementById("editFirstName").value.trim();
+    const lastName = document.getElementById("editLastName").value.trim();
+    const email = document.getElementById("editEmail").value.trim();
+    const password = document.getElementById("editPassword").value.trim();
+
+    if (!firstName || !lastName || !email) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const payload = { firstName, lastName, email };
+    if (password) {
+      // Basic client-side validation
+      if (password.length < 8 ||
+          !/[a-z]/.test(password) ||
+          !/[A-Z]/.test(password) ||
+          !/[0-9]/.test(password)) {
+        alert("Password must be at least 8 characters and contain uppercase, lowercase, and number");
+        return;
+      }
+      payload.password = password;
+    }
+
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...headersAuth },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById("editProfileMsg").innerHTML = '<div class="alert alert-success">Profile updated successfully!</div>';
+        bootstrap.Modal.getInstance(document.getElementById("editProfileModal")).hide();
+        loadCustomerData(); // Refresh data
+        setTimeout(() => {
+          document.getElementById("editProfileMsg").innerHTML = '';
+        }, 3000);
+      } else {
+        document.getElementById("editProfileMsg").innerHTML = `<div class="alert alert-danger">${data.error || 'Update failed'}</div>`;
+      }
+    } catch (error) {
+      document.getElementById("editProfileMsg").innerHTML = '<div class="alert alert-danger">Network error. Please try again.</div>';
+    }
+  });
+
+  // Load data on page load
+  loadCustomerData();
+
+})();
+</script>
+
+<%- include('partials/footer') %>

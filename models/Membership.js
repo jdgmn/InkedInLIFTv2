@@ -7,27 +7,30 @@ const MembershipSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "User is required for membership"]
     },
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MembershipPlan",
+      required: [true, "Plan reference is required"]
+    },
     membershipType: {
       type: String,
-      enum: {
-        values: ["monthly", "quarterly", "annual"],
-        message: "{VALUE} is not a valid membership type"
-      },
-      required: [true, "Membership type is required"],
+      required: [true, "Membership type/plan name is required"],
+      maxlength: [100, "Plan name cannot exceed 100 characters"]
     },
     price: {
       type: Number,
       required: [true, "Price is required"],
       min: [0, "Price cannot be negative"],
-      validate: {
-        validator: function(v) {
-          return v >= 0;
-        },
-        message: props => `Price must be a positive number`
-      }
     },
-    startDate: { type: Date, default: Date.now },
-    endDate: { type: Date },
+    startDate: {
+      type: Date,
+      default: Date.now,
+      required: true
+    },
+    endDate: {
+      type: Date,
+      required: [true, "End date is required"]
+    },
     paymentStatus: {
       type: String,
       enum: {
@@ -50,29 +53,6 @@ const MembershipSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// Pre-save hook to calculate endDate based on membershipType
-MembershipSchema.pre("save", function(next) {
-  if (this.isNew || this.isModified("membershipType") || this.isModified("startDate")) {
-    const start = this.startDate || new Date();
-    const endDate = new Date(start);
-    
-    switch (this.membershipType) {
-      case "monthly":
-        endDate.setMonth(endDate.getMonth() + 1);
-        break;
-      case "quarterly":
-        endDate.setMonth(endDate.getMonth() + 3);
-        break;
-      case "annual":
-        endDate.setFullYear(endDate.getFullYear() + 1);
-        break;
-    }
-    
-    this.endDate = endDate;
-  }
-  next();
-});
 
 // Method to check if membership is expired
 MembershipSchema.methods.isExpired = function() {

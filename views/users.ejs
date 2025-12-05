@@ -38,9 +38,40 @@
 </div>
 
 <table class="table table-striped" id="usersTable">
-  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Verified</th><th>Actions</th></tr></thead>
-  <tbody></tbody>
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Verified</th><th>Created</th><th>Actions</th></tr></thead>
+  <tbody>
+    <% users.forEach(user => { %>
+      <tr data-id="<%= user._id %>">
+        <td><%= (user.firstName || '') + ' ' + (user.lastName || '') %></td>
+        <td><%= user.email %></td>
+        <td><%= user.role %></td>
+        <td><%= user.verified ? 'Yes' : 'No' %></td>
+        <td><%= user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '' %></td>
+        <td><button class="btn btn-sm btn-primary editBtn">Edit</button> <button class="btn btn-sm btn-danger delBtn">Delete</button></td>
+      </tr>
+    <% }); %>
+  </tbody>
 </table>
+
+<nav aria-label="Users pagination">
+  <ul class="pagination" id="paginationControls">
+    <% if (pagination.hasPrev) { %>
+      <li class="page-item">
+        <a class="page-link" href="?page=<%= pagination.currentPage - 1 %>">Previous</a>
+      </li>
+    <% } %>
+    <% for (let i = Math.max(1, pagination.currentPage - 2); i <= Math.min(pagination.totalPages, pagination.currentPage + 2); i++) { %>
+      <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+        <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+      </li>
+    <% } %>
+    <% if (pagination.hasNext) { %>
+      <li class="page-item">
+        <a class="page-link" href="?page=<%= pagination.currentPage + 1 %>">Next</a>
+      </li>
+    <% } %>
+  </ul>
+</nav>
 
 <!-- Edit User Modal -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
@@ -104,6 +135,11 @@
   const registerForm = document.getElementById("dashboardRegisterForm");
   const registerMsg = document.getElementById("registerMsg");
 
+  // Get current page from URL or default to 1
+  const urlParams = new URLSearchParams(window.location.search);
+  const currentPage = parseInt(urlParams.get('page')) || <%= pagination.currentPage %>;
+  const limit = 10; // matches viewRoutes.js
+
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     registerMsg.innerText = "";
@@ -126,12 +162,13 @@
     setTimeout(load, 700);
   });
 
-  async function load() {
-    tbody.innerHTML = "<tr><td colspan='5'>Loading…</td></tr>";
-    const res = await fetch("/api/users", { headers: headersAuth });
-    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='5'>Failed to load (${res.status})</td></tr>`; return; }
+  async function load(page = currentPage) {
+    tbody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
+    const url = `/api/users?page=${page}&limit=${limit}`;
+    const res = await fetch(url, { headers: headersAuth });
+    if (!res.ok) { tbody.innerHTML = `<tr><td colspan='6'>Failed to load (${res.status})</td></tr>`; return; }
     const users = await res.json();
-    tbody.innerHTML = users.map(u => `<tr data-id="${u._id}"><td>${(u.firstName||'') + ' ' + (u.lastName||'')}</td><td>${u.email}</td><td>${u.role}</td><td>${u.verified ? 'Yes' : 'No'}</td><td><button class="btn btn-sm btn-primary editBtn">Edit</button> <button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
+    tbody.innerHTML = users.map(u => `<tr data-id="${u._id}"><td>${(u.firstName||'') + ' ' + (u.lastName||'')}</td><td>${u.email}</td><td>${u.role}</td><td>${u.verified ? 'Yes' : 'No'}</td><td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''}</td><td><button class="btn btn-sm btn-primary editBtn">Edit</button> <button class="btn btn-sm btn-danger delBtn">Delete</button></td></tr>`).join('');
     attachHandlers();
   }
 
@@ -140,7 +177,13 @@
       const id = e.target.closest("tr").dataset.id;
       if (!confirm("Delete user?")) return;
       const res = await fetch("/api/users/" + id, { method: "DELETE", headers: headersAuth });
-      if (!res.ok) { alert("Delete failed"); return; } load();
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`Delete failed: ${data.error || "Unknown error"}`);
+        return;
+      }
+      alert("User deleted successfully");
+      load();
     });
     document.querySelectorAll(".editBtn").forEach(btn => btn.onclick = async (e) => {
       const tr = e.target.closest("tr");

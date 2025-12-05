@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Membership = require("../models/Membership");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const sendEmail = require("../config/email");
@@ -100,7 +101,7 @@ exports.registerUser = async (req, res) => {
     }
 
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
-    const verifyLink = `${baseUrl}/api/users/verify/${verificationToken}`;
+    const verifyLink = `${baseUrl}/verify/${verificationToken}`;
 
     try {
       await sendEmail(
@@ -353,6 +354,20 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Check for active memberships
+    const activeMembership = await Membership.findOne({
+      user: id,
+      status: "active",
+      endDate: { $gte: new Date() }
+    });
+
+    if (activeMembership) {
+      return res.status(400).json({ error: "Cannot delete user with active membership. Cancel membership first." });
+    }
+
     await User.findByIdAndDelete(id);
     res.json({ message: "User deleted" });
   } catch (error) {
@@ -374,6 +389,68 @@ exports.getCurrentUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Get current user error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// UPDATE current user (clients can update their own profile)
+exports.updateCurrentUser = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password } = req.body;
+    const userId = req.user._id;
+
+    // Validate email if provided
+    if (email && !validateEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Check if email is already taken by another user
+    if (email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
+    const updates = {};
+    if (firstName !== undefined) updates.firstName = firstName;
+    if (lastName !== undefined) updates.lastName = lastName;
+    if (email !== undefined) updates.email = email;
+
+    // Find and update user
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Update password if provided
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.message });
+      }
+      await user.setPassword(password);
+    }
+
+    // Apply other updates
+    Object.assign(user, updates);
+    user.updatedBy = req.user._id;
+    await user.save();
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        verified: user.verified
+      }
+    });
+  } catch (error) {
+    console.error("Update current user error:", error);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: "Server error" });
   }
 };
