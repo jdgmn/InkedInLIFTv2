@@ -2,15 +2,29 @@
 
 A comprehensive gym management system built with Node.js, Express, MongoDB, and EJS. Features user management, membership tracking, check-in system, analytics dashboard, and email verification.
 
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Project Structure](#project-structure)
+- [Quick Start Guide](#quick-start-guide)
+- [API Endpoints](#api-endpoints)
+- [Security Features](#security-features)
+- [Development Notes](#development-notes)
+- [TO DO](#to-do)
+
 ## Features
 
 ### Core Functionality
 - **User Registration & Authentication**: Secure signup with email verification and JWT-based login
 - **Role-Based Access**: Admin, Receptionist, and Client roles with appropriate permissions
-- **Membership Management**: Create and track memberships (Monthly, Quarterly, Annual)
+- **Membership Management**: Create and track memberships (Monthly, Quarterly, Annual) with auto-expiry
+- **Membership Plans**: Predefined plans for easy membership creation
 - **Check-in System with Check-out**: Self check-in page and admin check-in and check-out functionality
 - **Analytics Dashboard**: Revenue tracking, user growth metrics, peak hours analysis
-- **Email Notifications**: Automated verification emails and membership reminders
+- **Email Notifications**: Automated verification emails, membership expiry reminders, and archive notifications
+- **Archiving System**: Yearly archiving of old memberships and check-ins on January 1st
 
 ### Recent Enhancements
 - **Email Verification Bypass**: Temporary bypass functionality for testing (`/bypass`)
@@ -18,6 +32,8 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 - **Improved Dashboard Layout**: Quick check-in moved to top, better organization
 - **Auto-expiry Logic**: Memberships automatically marked as expired when past end date
 - **Enhanced UX**: Better edit prompts and payment status auto-updates
+- **Customer Dashboard**: Dedicated dashboard for clients
+- **Profile Management**: User profile pages
 
 ## Prerequisites
 - Node.js 18+ and npm
@@ -54,16 +70,17 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 ## Project Structure
 
 - **Server**: `server.js` (Express + EJS)
-- **Views**: `/views` (login, register, dashboard, users, memberships, checkins, selfcheckin)
+- **Views**: `/views` (login, register, dashboard, customer-dashboard, users, memberships, membership-plans, checkins, selfcheckin, profile, verify, bypass)
 - **API Routes**:
   - `/api/users` - User management
   - `/api/checkins` - Check-in operations
   - `/api/memberships` - Membership management
+  - `/api/membership-plans` - Membership plan management
   - `/api/analytics` - Dashboard analytics
 - **Background Jobs**:
-  - `/cron/notificationScheduler.js` - Daily notifications
+  - `/cron/notificationScheduler.js` - Daily membership expiry notifications
   - `/jobs/archiver.js` - Yearly archive on Jan 1
-- **Models**: `/models` (User, Membership, Checkin, Archive)
+- **Models**: `/models` (User, Membership, MembershipPlan, Checkin, Archive)
 - **Config**: `/config` (Database, Email setup)
 
 ## Quick Start Guide
@@ -71,7 +88,7 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 1. **Register**: Visit `/register` (verification email sent if EMAIL_* configured)
 2. **Login**: Visit `/` (stores JWT in localStorage)
 3. **Dashboard**: Visit `/dashboard` (fetches analytics data)
-4. **Admin Functions**: Access `/memberships`, `/checkins`, `/users` (role-restricted)
+4. **Admin Functions**: Access `/memberships`, `/membership-plans`, `/checkins`, `/users` (role-restricted)
 
 ## API Endpoints
 
@@ -81,6 +98,7 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 - `POST /api/users/verify/:token` - Email verification
 - `POST /api/checkins` - Self check-in
 - `GET /selfcheckin` - Self check-in page
+- `GET /api/membership-plans/plans` - View active membership plans
 
 ### Protected Endpoints (JWT Required)
 - `GET /api/users` - List users (admin)
@@ -90,10 +108,13 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 - `GET /api/memberships` - List memberships (admin/receptionist)
 - `PUT /api/memberships/:id` - Update membership (admin/receptionist)
 - `DELETE /api/memberships/:id` - Delete membership (admin/receptionist)
+- `GET /api/membership-plans` - List membership plans (admin)
+- `POST /api/membership-plans` - Create membership plan (admin)
+- `PUT /api/membership-plans/:id` - Update membership plan (admin)
+- `DELETE /api/membership-plans/:id` - Delete membership plan (admin)
 - `GET /api/checkins` - List check-ins (admin/receptionist)
 - `DELETE /api/checkins/:id` - Delete check-in (admin/receptionist)
 - `GET /api/analytics/*` - Analytics data (admin)
-
 
 ## Security Features
 
@@ -112,10 +133,6 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 - Cron jobs for automated tasks
 - Comprehensive error handling and validation
 
-## TO DO
+## Development Note
 
-- Front-End Streamlining
-   - Dashboad and role-based default pages needs to be polished
-   - Users page needs format fixing
-   - self-check in page ui polishes
-   - I left the seeder code, we should probably remove that one?
+Due to Resend's policy, only the account owner's email address can receive verification emails without a registered domain. As a temporary workaround, use `/bypass-verification` to bypass email verification during development or testing.
