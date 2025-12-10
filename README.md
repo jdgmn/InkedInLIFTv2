@@ -136,3 +136,5 @@ A comprehensive gym management system built with Node.js, Express, MongoDB, and 
 ## Development Note
 
 Due to Resend's policy, only the account owner's email address can receive verification emails without a registered domain. As a temporary workaround, use `/bypass-verification` to bypass email verification during development or testing.
+
+Note: Added a system that prompts the user on verification if the email was not sent. /bypass-verification will still be kept just in case but the functionality is largely redundant now.
