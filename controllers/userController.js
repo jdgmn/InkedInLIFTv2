@@ -116,6 +116,7 @@ exports.registerUser = async (req, res) => {
 
     res.status(201).json({
       message: "User registered! Please check your email to verify your account.",
+      verificationToken: verificationToken,
     });
   } catch (error) {
     console.error(error);

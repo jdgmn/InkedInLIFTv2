@@ -108,6 +108,39 @@
         return emailRegex.test(email);
       }
 
+      // Show modal function
+      function showModal(title, message, onClose = null) {
+        const modalId = 'dynamicModal';
+        const modalHtml = `
+          <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="${modalId}Label">${title}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <p>${message}</p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+
+        // Call onClose callback when modal is hidden
+        document.getElementById(modalId).addEventListener('hidden.bs.modal', function () {
+          if (onClose) onClose();
+          // Remove modal from DOM after hiding
+          setTimeout(() => document.getElementById(modalId).remove(), 100);
+        });
+      }
+
       function updateEmailValidation() {
         const email = document.getElementById("email").value.trim();
         const emailDiv = document.getElementById("emailValidation");
@@ -134,18 +167,18 @@
 
         // Client-side validation
         if (!firstName || !lastName || !email || !password) {
-          alert("All fields are required");
+          showModal("Validation Error", "All fields are required");
           return;
         }
 
         if (!validateEmail(email)) {
-          alert("Please enter a valid email address");
+          showModal("Validation Error", "Please enter a valid email address");
           return;
         }
 
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.valid) {
-          alert("Password must be at least 8 characters and contain uppercase, lowercase, and number");
+          showModal("Validation Error", "Password must be at least 8 characters and contain uppercase, lowercase, and number");
           return;
         }
 
@@ -157,12 +190,45 @@
 
         const data = await res.json();
         if (!res.ok) {
-          alert(data.error || "Registration failed");
+          showModal("Registration Failed", data.error || "Registration failed");
           return;
         }
 
-        alert(data.message || "Registered. Check your email.");
-        window.location.href = "/";
+        // First modal: Registration success
+        showModal("Registration Successful", data.message || "Registered. Check your email.", () => {
+          // After first modal closes, show verification modal
+          const baseUrl = window.location.origin;
+          const verifyLink = `${baseUrl}/verify/${data.verificationToken}`;
+          const modalHtml = `
+            <div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="verificationModalLabel">Email Verification</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p>Due to current email service limitations, verification emails may not be delivered. Please use the link below to verify your account:</p>
+                    <p><a href="${verifyLink}" target="_blank">${verifyLink}</a></p>
+                    <p>You can also copy and paste this link into your browser.</p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='${verifyLink}'">Verify Now</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          document.body.insertAdjacentHTML('beforeend', modalHtml);
+          const modal = new bootstrap.Modal(document.getElementById('verificationModal'));
+          modal.show();
+
+          // Redirect after modal is closed
+          document.getElementById('verificationModal').addEventListener('hidden.bs.modal', function () {
+            window.location.href = "/";
+          });
+        });
       });
 
       // Add event listeners for real-time validation
