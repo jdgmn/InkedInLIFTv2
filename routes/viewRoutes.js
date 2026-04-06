@@ -7,7 +7,10 @@ const MembershipPlan = require("../models/MembershipPlan");
 
 // Public pages
 router.get("/", (req, res) => res.render("login"));
+router.get("/login", (req, res) => res.render("login"));
 router.get("/register", (req, res) => res.render("register"));
+router.get("/forgot-password", (req, res) => res.render("forgot-password"));
+router.get("/reset-password/:token", (req, res) => res.render("reset-password"));
 
 // Protected pages with role-based access
 const { protect, restrictTo } = require("../middlewares/authMiddleware");

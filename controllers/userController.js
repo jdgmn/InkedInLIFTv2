@@ -204,7 +204,7 @@ exports.forgotPassword = async (req, res) => {
       console.error("Email send error:", emailErr);
     }
 
-    res.json({ message: "Password reset link sent to email" });
+    res.json({ message: "Password reset link sent to email", resetToken: resetToken });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
