@@ -46,7 +46,14 @@ router.post("/forgot", forgotPassword);
 router.post("/reset/:token", resetPassword);
 
 // Admin/receptionist update and delete user routes
-router.put("/:id", protect, restrictTo("admin", "receptionist"), updateUser);
+router.put("/:id", protect, (req, res, next) => {
+  // Allow users to update their own profile, or admin/receptionist to update any user
+  if (req.user.id === req.params.id || ['admin', 'receptionist'].includes(req.user.role)) {
+    next();
+  } else {
+    return res.status(403).json({ error: "Forbidden - insufficient role" });
+  }
+}, updateUser);
 router.delete("/:id", protect, restrictTo("admin", "receptionist"), deleteUser);
 
 // Get current user info (for role-based UI)

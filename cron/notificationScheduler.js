@@ -9,12 +9,17 @@ cron.schedule("0 0 * * *", async () => {
     console.log("Running daily notification checks...");
 
     const today = new Date();
-    const oneMonthFromNow = new Date(today);
-    oneMonthFromNow.setDate(today.getDate() + 30);
+    // Set time to start of day to match exact date comparison
+    today.setHours(0, 0, 0, 0);
+    
+    const exactly30DaysFromNow = new Date(today);
+    exactly30DaysFromNow.setDate(today.getDate() + 30);
+    exactly30DaysFromNow.setHours(23, 59, 59, 999);
 
-    // notify users with memberships expiring in ~30 days
+    // Only notify users when membership expires EXACTLY in 30 days (one single notification)
     const soon = await Membership.find({
-      endDate: { $gte: today, $lte: oneMonthFromNow },
+      endDate: { $gte: today, $lte: exactly30DaysFromNow },
+      expiryNotificationSent: { $ne: true }
     }).populate("user", "email firstName lastName");
 
     for (const m of soon) {
@@ -27,6 +32,11 @@ cron.schedule("0 0 * * *", async () => {
           `<p>Hi ${name || "member"},</p>
            <p>Your ${m.membershipType} membership will expire on ${m.endDate.toDateString()}. Please renew to avoid interruption.</p>`
         );
+        
+        // Mark notification as sent so we don't send it again
+        m.expiryNotificationSent = true;
+        await m.save();
+        
       } catch (err) {
         console.error("Notification send failed for", m.user.email, err);
       }

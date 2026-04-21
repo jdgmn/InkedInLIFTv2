@@ -365,8 +365,26 @@ exports.deleteUser = async (req, res) => {
       endDate: { $gte: new Date() }
     });
 
-    if (activeMembership) {
-      return res.status(400).json({ error: "Cannot delete user with active membership. Cancel membership first." });
+    if (activeMembership && !req.body.forceDelete) {
+      return res.status(409).json({
+        error: "User has active membership",
+        warning: "This user currently has an active membership. Deleting this user will permanently cancel their membership and remove all their checkin history.",
+        activeMembership: {
+          type: activeMembership.membershipType,
+          endDate: activeMembership.endDate,
+          price: activeMembership.price
+        },
+        confirmationRequired: true,
+        confirmAction: "Send this request again with ?forceDelete=true or include forceDelete: true in request body to confirm deletion."
+      });
+    }
+
+    // If force delete is confirmed, also cancel the active membership first
+    if (activeMembership && req.body.forceDelete) {
+      activeMembership.status = "cancelled";
+      activeMembership.cancelledAt = new Date();
+      activeMembership.cancelledBy = req.user._id;
+      await activeMembership.save();
     }
 
     await User.findByIdAndDelete(id);

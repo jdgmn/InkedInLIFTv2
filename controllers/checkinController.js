@@ -120,7 +120,17 @@ exports.checkoutUser = async (req, res) => {
       });
     }
 
-    checkin.checkoutTime = new Date();
+    // Use provided checkout time or current time
+    const checkoutTime = req.body.checkoutTime ? new Date(req.body.checkoutTime) : new Date();
+    
+    // Validate checkout time is after checkin time
+    if (checkoutTime <= new Date(checkin.checkinTime)) {
+      return res.status(400).json({
+        error: "Checkout time cannot be earlier than checkin time"
+      });
+    }
+
+    checkin.checkoutTime = checkoutTime;
     checkin.updatedBy = req.user ? req.user._id : null;
     await checkin.save();
 

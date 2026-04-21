@@ -19,11 +19,17 @@ exports.getDashboardStats = async (req, res) => {
 exports.getWeeklyCheckins = async (req, res) => {
   try {
     const today = new Date();
+    // Set to END of today (23:59:59.999) to include all checkins for today
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+    
+    // Set to START of day 7 days ago (00:00:00.000) to get full 7 days
     const past = new Date(today);
-    past.setDate(today.getDate() - 6); // 7 days inclusive
+    past.setDate(today.getDate() - 6);
+    past.setHours(0, 0, 0, 0); // 7 days inclusive from midnight
 
     const pipeline = [
-      { $match: { checkinTime: { $gte: past, $lte: today } } },
+      { $match: { checkinTime: { $gte: past, $lte: endOfToday } } },
       {
         $group: {
           _id: {
