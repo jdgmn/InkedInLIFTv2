@@ -68,13 +68,16 @@
         const data = await res.json();
 
         if (res.ok) {
-          messageEl.innerHTML = `<div class="alert alert-success">✓ ${data.message || "Check-in successful!"}</div>`;
+          messageEl.textContent = `✓ ${data.message || "Check-in successful!"}`;
+          messageEl.className = 'alert alert-success';
           document.getElementById("selfCheckinForm").reset();
         } else {
-          messageEl.innerHTML = `<div class="alert alert-danger">✗ ${data.error || "Check-in failed"}</div>`;
+          messageEl.textContent = `✗ ${data.error || "Check-in failed"}`;
+          messageEl.className = 'alert alert-danger';
         }
       } catch (err) {
-        messageEl.innerHTML = `<div class="alert alert-danger">✗ Network error. Please try again.</div>`;
+        messageEl.textContent = `✗ Network error. Please try again.`;
+        messageEl.className = 'alert alert-danger';
       }
     });
 

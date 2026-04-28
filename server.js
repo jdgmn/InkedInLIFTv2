@@ -3,6 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const xss = require('xss');
+const mongoSanitize = require('mongo-sanitize');
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 const path = require("path");
@@ -31,6 +33,39 @@ const authLimiter = rateLimit({
 app.use(express.json());
 app.use(cors());
 app.use(cookieParser());
+
+// ✅ NoSQL Injection Protection - sanitize all incoming requests
+app.use((req, res, next) => {
+  req.body = mongoSanitize(req.body);
+  req.params = mongoSanitize(req.params);
+  req.query = mongoSanitize(req.query);
+  next();
+});
+
+// ✅ XSS Protection - sanitize all string input automatically
+app.use((req, res, next) => {
+  function sanitizeObject(obj) {
+    for (const key in obj) {
+      if (typeof obj[key] === 'string') {
+        obj[key] = xss(obj[key]);
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        sanitizeObject(obj[key]);
+      }
+    }
+  }
+  if (req.body) sanitizeObject(req.body);
+  if (req.params) sanitizeObject(req.params);
+  if (req.query) sanitizeObject(req.query);
+  next();
+});
+
+// ✅ Secure HTTP Headers
+app.use((req, res, next) => {
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
