@@ -3,9 +3,40 @@
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-6">
-      <div class="card">
-        <div class="card-header">
+      
+      <!-- Profile View Card -->
+      <div class="card mb-4" id="profileViewCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4>My Profile</h4>
+          <button id="editProfileBtn" class="btn btn-primary btn-sm">Edit Profile</button>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="text-muted small">Full Name</label>
+            <p class="h5" id="viewName">-</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted small">Email Address</label>
+            <p class="h5" id="viewEmail">-</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted small">Account Role</label>
+            <p class="h5 text-capitalize" id="viewRole">-</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted small">Account Status</label>
+            <p class="h5" id="viewVerified">
+              <span class="badge bg-success">Verified</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Edit Card (Hidden by default) -->
+      <div class="card d-none" id="profileEditCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h4>Edit Profile</h4>
+          <button id="cancelEditBtn" class="btn btn-secondary btn-sm">Cancel</button>
         </div>
         <div class="card-body">
           <form id="profileForm">
@@ -33,6 +64,7 @@
           </form>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -42,6 +74,8 @@
   function getToken(){ try{ const t=localStorage.getItem("token"); if(t) return t; }catch(e){} const m=document.cookie.match(/(?:^|; )token=([^;]+)/); return m?m[1]:null;}
   const token = getToken();
   const headersAuth = token ? { Authorization: "Bearer " + token } : {};
+
+  let currentUser = null;
 
   // Password strength validation
   function validatePassword(password) {
@@ -66,15 +100,43 @@
     return emailRegex.test(email);
   }
 
+  // Switch to view mode
+  function showViewMode() {
+    document.getElementById('profileViewCard').classList.remove('d-none');
+    document.getElementById('profileEditCard').classList.add('d-none');
+  }
+
+  // Switch to edit mode
+  function showEditMode() {
+    document.getElementById('profileViewCard').classList.add('d-none');
+    document.getElementById('profileEditCard').classList.remove('d-none');
+    
+    // Populate form with current values
+    if (currentUser) {
+      document.getElementById('firstName').value = currentUser.firstName || '';
+      document.getElementById('lastName').value = currentUser.lastName || '';
+      document.getElementById('email').value = currentUser.email || '';
+      document.getElementById('password').value = '';
+    }
+  }
+
   // Load current user data
   async function loadProfile() {
     try {
       const response = await fetch('/api/users/me', { headers: headersAuth });
       if (response.ok) {
-        const user = await response.json();
-        document.getElementById('firstName').value = user.firstName || '';
-        document.getElementById('lastName').value = user.lastName || '';
-        document.getElementById('email').value = user.email || '';
+        currentUser = await response.json();
+        
+        // Update view mode
+        document.getElementById('viewName').textContent = `${currentUser.firstName} ${currentUser.lastName}`;
+        document.getElementById('viewEmail').textContent = currentUser.email;
+        document.getElementById('viewRole').textContent = currentUser.role;
+        
+        if (!currentUser.verified) {
+          document.getElementById('viewVerified').innerHTML = '<span class="badge bg-warning">Unverified</span>';
+        }
+        
+        showViewMode();
       } else {
         alert('Failed to load profile');
       }
@@ -85,6 +147,10 @@
   }
 
   loadProfile();
+
+  // Toggle edit mode
+  document.getElementById('editProfileBtn').addEventListener('click', showEditMode);
+  document.getElementById('cancelEditBtn').addEventListener('click', showViewMode);
 
   document.getElementById("profileForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -97,6 +163,16 @@
     // Client-side validation
     if (!firstName || !lastName || !email) {
       alert("First name, last name, and email are required");
+      return;
+    }
+
+    if (firstName.length < 2 || firstName.length > 50) {
+      alert("First name must be between 2 and 50 characters");
+      return;
+    }
+
+    if (lastName.length < 2 || lastName.length > 50) {
+      alert("Last name must be between 2 and 50 characters");
       return;
     }
 
@@ -117,7 +193,10 @@
     try {
       const response = await fetch("/api/users/me", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...headersAuth
+        },
         body: JSON.stringify(payload)
       });
 
@@ -128,6 +207,11 @@
       }
 
       alert(data.message || "Profile updated successfully");
+      
+      // Reload profile data and return to view mode
+      await loadProfile();
+      showViewMode();
+      
     } catch (error) {
       console.error(error);
       alert("An error occurred");

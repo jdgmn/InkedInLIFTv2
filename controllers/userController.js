@@ -5,9 +5,18 @@ const crypto = require("crypto");
 const sendEmail = require("../config/email");
 
 // Helper: create JWT token
-const generateToken = (user) => {
+const generateToken = (user, req) => {
+  const userAgent = req.headers['user-agent'] || '';
+  const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+  
   return jwt.sign(
-    { id: user._id, email: user.email, role: user.role },
+    { 
+      id: user._id, 
+      email: user.email, 
+      role: user.role,
+      userAgent,
+      ip
+    },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -45,6 +54,22 @@ exports.registerUser = async (req, res) => {
       return res
         .status(400)
         .json({ error: "email, firstName and lastName are required" });
+    }
+
+    // Validate name length
+    if (firstName.length < 2 || firstName.length > 50) {
+      return res.status(400).json({ error: "First name must be between 2 and 50 characters" });
+    }
+    if (lastName.length < 2 || lastName.length > 50) {
+      return res.status(400).json({ error: "Last name must be between 2 and 50 characters" });
+    }
+
+    // Validate name length
+    if (firstName.length < 2 || firstName.length > 50) {
+      return res.status(400).json({ error: "First name must be between 2 and 50 characters" });
+    }
+    if (lastName.length < 2 || lastName.length > 50) {
+      return res.status(400).json({ error: "Last name must be between 2 and 50 characters" });
     }
 
     // Validate email format
@@ -164,7 +189,7 @@ exports.loginUser = async (req, res) => {
     if (!user.verified)
       return res.status(403).json({ error: "Please verify your email first" });
 
-    const token = generateToken(user);
+    const token = generateToken(user, req);
     res.json({
       message: "Login successful",
       token,
@@ -303,6 +328,14 @@ exports.updateUser = async (req, res) => {
     const { id } = req.params;
     const { firstName, lastName, email, role, verified, password } = req.body;
     
+    // Validate name length if provided
+    if (firstName && (firstName.length < 2 || firstName.length > 50)) {
+      return res.status(400).json({ error: "First name must be between 2 and 50 characters" });
+    }
+    if (lastName && (lastName.length < 2 || lastName.length > 50)) {
+      return res.status(400).json({ error: "Last name must be between 2 and 50 characters" });
+    }
+
     // Validate email if provided
     if (email && !validateEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
@@ -417,6 +450,14 @@ exports.updateCurrentUser = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
     const userId = req.user._id;
+
+    // Validate name length if provided
+    if (firstName && (firstName.length < 2 || firstName.length > 50)) {
+      return res.status(400).json({ error: "First name must be between 2 and 50 characters" });
+    }
+    if (lastName && (lastName.length < 2 || lastName.length > 50)) {
+      return res.status(400).json({ error: "Last name must be between 2 and 50 characters" });
+    }
 
     // Validate email if provided
     if (email && !validateEmail(email)) {

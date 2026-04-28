@@ -42,7 +42,21 @@ exports.getWeeklyCheckins = async (req, res) => {
     ];
 
     const rows = await Checkin.aggregate(pipeline);
-    res.json(rows);
+    
+    // Fill all 7 days including days with 0 checkins
+    const fullWeek = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(past);
+      date.setDate(past.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      const existing = rows.find(r => r._id === dateStr);
+      fullWeek.push({
+        _id: dateStr,
+        count: existing ? existing.count : 0
+      });
+    }
+    
+    res.json(fullWeek);
   } catch (error) {
     console.error("Weekly checkins error:", error);
     res.status(500).json({ error: "Server error" });

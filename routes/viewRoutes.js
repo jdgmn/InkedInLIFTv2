@@ -83,8 +83,8 @@ router.get("/checkins", protect, restrictTo("admin", "receptionist"), async (req
   res.render("checkins", { checkins });
 });
 
-// Self check-in page (admin, receptionist, client)
-router.get("/selfcheckin", protect, restrictTo("admin", "receptionist", "client"), (req, res) => {
+// Self check-in page (public access)
+router.get("/selfcheckin", (req, res) => {
   res.render("selfcheckin");
 });
 

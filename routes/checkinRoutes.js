@@ -4,8 +4,8 @@ const Checkin = require("../models/Checkin");
 const { checkinUser, checkoutUser } = require("../controllers/checkinController");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
-// Protected endpoint - create checkin
-router.post("/", protect, restrictTo("admin", "receptionist", "client"), checkinUser);
+// Public endpoint - create checkin (self service allowed)
+router.post("/", checkinUser);
 
 // Protected endpoint - list checkins with pagination and filters
 router.get("/", protect, restrictTo("admin", "receptionist"), async (req, res) => {

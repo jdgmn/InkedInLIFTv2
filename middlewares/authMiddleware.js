@@ -26,6 +26,18 @@ exports.protect = async (req, res, next) => {
     const user = await User.findById(decoded.id).select("-passwordHash -__v");
     if (!user) return res.status(401).json({ error: "User not found" });
 
+    // Session hijacking protection: validate User-Agent and IP
+    const requestUserAgent = req.headers['user-agent'] || '';
+    const requestIp = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (decoded.userAgent && decoded.userAgent !== requestUserAgent) {
+      return res.status(401).json({ error: "Session invalid - device mismatch" });
+    }
+    
+    if (decoded.ip && decoded.ip !== requestIp) {
+      return res.status(401).json({ error: "Session invalid - location mismatch" });
+    }
+
     req.user = user;
     next();
   } catch (error) {

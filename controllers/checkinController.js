@@ -64,10 +64,8 @@ exports.checkinUser = async (req, res) => {
     }
 
     if (existingCheckin) {
-      const checkinTime = new Date(existingCheckin.checkinTime).toLocaleString();
       return res.status(400).json({
-        error: `Already checked in at ${checkinTime}. Please check out first if this is a different session.`,
-        existingCheckinTime: existingCheckin.checkinTime
+        error: "User is already checked in."
       });
     }
 

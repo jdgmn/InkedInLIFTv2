@@ -67,7 +67,8 @@ exports.createMembership = async (req, res) => {
     }
 
     // Calculate end date based on plan duration
-    const start = startDate ? new Date(startDate) : new Date();
+    // Enforce current date only (no future start dates)
+    const start = new Date();
     const endDate = new Date(start);
     endDate.setDate(endDate.getDate() + plan.duration);
 
@@ -178,9 +179,16 @@ exports.updateMembership = async (req, res) => {
       membership.status = status;
     }
 
-    // Update start date if provided
+    // Update start date if provided - enforce current date only
     if (startDate) {
-      membership.startDate = new Date(startDate);
+      const requestedStart = new Date(startDate);
+      const today = new Date();
+      const requestedDateOnly = new Date(requestedStart.getFullYear(), requestedStart.getMonth(), requestedStart.getDate());
+      const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      if (requestedDateOnly.getTime() === todayDateOnly.getTime()) {
+        membership.startDate = requestedStart;
+      }
     }
 
     membership.updatedBy = req.user ? req.user._id : null;

@@ -3,10 +3,29 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 const path = require("path");
 
 const app = express();
+
+// Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests from this IP, please try again later." }
+});
+
+// Login/Auth rate limiter (stricter limits)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login requests
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again later." }
+});
 
 // Middleware
 app.use(express.json());
@@ -16,6 +35,9 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
+// Apply rate limit to all API routes
+app.use("/api/", apiLimiter);
 
 // Connect to MongoDB
 connectDB();
@@ -33,6 +55,9 @@ const membershipPlanRoutes = require("./routes/membershipPlanRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 
 app.use("/", viewRoutes);
+// Apply stricter auth rate limits for login endpoints
+app.use("/api/users/login", authLimiter);
+app.use("/api/users/register", authLimiter);
 app.use("/api/users", userRoutes);
 app.use("/api/checkins", checkinRoutes);
 app.use("/api/memberships", membershipRoutes);
